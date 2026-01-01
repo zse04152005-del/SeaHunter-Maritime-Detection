@@ -1,0 +1,89 @@
+# ===================================
+# SeaHunter Project .gitignore
+# ===================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ===================================
+# Project-Specific
+# ===================================
+
+# Datasets (too large to upload)
+datasets/
+data/
+*.zip
+*.tar.gz
+*.rar
+
+# Training Results & Logs
+runs/
+wandb/
+logs/
+
+# Pretrained Weights (download separately)
+*.pt
+*.pth
+*.onnx
+*.tflite
+*.pb
+!yolov8s.pt  # Keep only baseline pretrained model if needed
+
+# Temporary Files
+temp/
+tmp/
+*.tmp
+
+# Paper & Visualizations (optional, can be included)
+# paper_visualizations/*.png
+# paper_visualizations/*.pdf
+
+# LaTeX Compilation Files
+*.aux
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+
+# Git
+.git/
+*.orig

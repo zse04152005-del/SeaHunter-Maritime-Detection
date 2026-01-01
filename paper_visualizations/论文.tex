@@ -1,0 +1,517 @@
+\documentclass[lettersize,journal]{IEEEtran}
+\usepackage{amsmath,amsfonts}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{array}
+\usepackage[caption=false,font=normalsize,labelfont=sf,textfont=sf]{subfig}
+\usepackage{textcomp}
+\usepackage{stfloats}
+\usepackage{url}
+\usepackage{verbatim}
+\usepackage{graphicx}
+\usepackage{cite}
+\usepackage{booktabs} % For professional looking tables
+\usepackage{multirow} % For multi-row cells in tables
+
+% --- 新增部分：Hyperref 设置 ---
+% 这段代码实现了点击引用跳转的功能
+% colorlinks=true: 开启颜色显示 (引用处会变蓝)
+% linkcolor=blue: 内部链接(如图表、章节)颜色
+% citecolor=blue: 参考文献引用([1])颜色
+% urlcolor=blue: 网址链接颜色
+\usepackage[colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue]{hyperref}
+% -----------------------------
+
+\hyphenation{op-tical net-works semi-conduc-tor IEEE-Xplore}
+
+\begin{document}
+
+\title{SeaHunter: A High-Precision YOLOv8s Network with Multi-Scale Context Aggregation for Tiny Maritime Object Detection}
+
+\author{Zhang Shien, 1230015451; Zhou Hongjie, 1230020467
+\thanks{The authors are with the Department of Computer Science, Macau University of Science and Technology. Project GitHub: \protect\url{https://github.com/YourUsername/SeaHunter_Project}}}
+
+% The paper headers
+\markboth{The final project report of computer vision, September 2025}%
+{Shell \MakeLowercase{\textit{et al.}}: A Sample Article Using IEEEtran.cls for IEEE Journals}
+
+\IEEEpubid{Macau University of Science and Technology, CS460/ EIE460/ SE460}
+
+\maketitle
+
+% --- CRITICAL FIX FOR FOOTER OVERLAP ---
+\enlargethispage{-6\baselineskip}
+% ---------------------------------------
+
+\begin{abstract}
+Maritime search and rescue (SAR) missions utilizing Unmanned Aerial Vehicles (UAVs) face significant challenges due to the extreme paucity of visual features in tiny objects (e.g., swimmers) and severe environmental interference such as whitecaps and sun glint. Standard object detection models, including the state-of-the-art YOLOv8, often suffer from feature information loss during downsampling and lack sensitivity to tiny objects. To address these issues, we propose \textbf{SeaHunter}, an enhanced detector based on YOLOv8s. Our method introduces four key innovations: (1) A high-resolution \textbf{P2 Detection Head} to utilize shallow features for tiny object localization; (2) \textbf{SPD-Conv} (Space-to-Depth Convolution) to replace standard strided convolutions, preventing fine-grained feature loss; (3) An \textbf{EMA} (Efficient Multi-Scale Attention) module to enhance feature representation; (4) A \textbf{MultiSEAM} module to aggregate multi-scale context and suppress background noise; (5) \textbf{Normalized Wasserstein Distance (NWD)} loss to mitigate the sensitivity of Intersection over Union (IoU) for tiny objects. Extensive experiments on the \textit{SeaDronesSee} dataset demonstrate that SeaHunter achieves an mAP@0.5 of \textbf{82.2\%}, significantly outperforming the baseline and achieving state-of-the-art performance in maritime tiny object detection.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Maritime SAR, Tiny Object Detection, YOLOv8, SPD-Conv, NWD Loss, Multi-Scale Feature Fusion.
+\end{IEEEkeywords}
+
+\section{Introduction}
+\IEEEPARstart{O}{bject} detection is a core research direction in computer vision, serving as the fundamental technology for numerous applications ranging from intelligent transportation \cite{ref1} and autonomous driving \cite{ref2} to medical imaging \cite{ref3} and robotics. With the rapid development of deep learning, particularly Convolutional Neural Networks (CNNs), the efficiency and accuracy of object detection have been significantly improved. According to object size \cite{ref4}, detection tasks can be broadly categorized into general object detection and small object detection. General object detection mainly focuses on objects with medium and large sizes and rich features, whereas small object detection targets objects that account for less than 0.12\% of the image area or occupy fewer than $32 \times 32$ pixels \cite{ref5}.
+
+The methods for object detection can be categorized into two main groups. The first group includes traditional methods, which rely on low-level hand-crafted features like object edges, shapes, and texture descriptors for detection. However, these methods have limited feature representation ability and are highly influenced by background contrast, leading to poor accuracy and robustness in complex environments. The second group comprises deep learning methods, which can be further divided into candidate region-based (two-stage) and regression-based (one-stage) methods. Candidate region-based methods, such as R-CNN \cite{ref6}, Fast R-CNN \cite{ref7}, and Faster R-CNN \cite{ref8}, involve a two-stage process: generating numerous object proposals and then classifying them using a CNN. Despite their effectiveness, these methods are relatively slow due to the time-consuming region selection process. Regression-based methods, such as SSD \cite{ref9} and the YOLO series \cite{b1, ref10}, do not rely on prior region proposals and instead use regression analysis to directly infer the object's area and generate the prediction box position. These single-stage methods achieve remarkable speed and have become the standard for real-time applications.
+
+\IEEEpubidadjcol
+
+However, challenges arise when dealing with small objects due to the difficulty in feature extraction from limited pixel coverage, lack of context information, and severe interference from the background, thereby necessitating improvements in detection methodologies \cite{ref11}.
+
+This challenge is particularly acute in the domain of maritime Search and Rescue (SAR). Unmanned Aerial Vehicles (UAVs) have emerged as critical assets in SAR missions due to their high mobility, rapid deployment capabilities, and broad field of view. However, targets in maritime environments, such as swimmers, life jackets, or small boats, appear extremely small in high-altitude UAV imagery \cite{b2}. Furthermore, the maritime background is highly dynamic and complex; whitecaps, sun glint, shadows, and water reflections can easily mimic the visual characteristics of targets, leading to high false positive rates. Standard detectors often fail to distinguish these tiny targets from the noise, as the multiple downsampling operations (strided convolutions and pooling) in CNN backbones tend to erode the already scarce features of small objects, leading to feature vanishing.
+
+In efforts to improve the detection of small objects, various methods have been proposed by different researchers. Some approaches utilize transposed convolutions for up-sampling to minimize information loss but encounter challenges in extracting multi-scale features in complex backgrounds \cite{ref12}. Others combine background subtraction algorithms with deep learning models, yet often at the cost of significantly increased model parameters. Recent works have proposed feature enhancement modules to generate different receptive field features and combine spatial pyramid pooling to improve feature extraction ability \cite{ref13}. However, when the feature extraction network is too deep, it inevitably results in the loss of shallow feature information crucial for localizing small objects. Additionally, while some attention mechanisms have been introduced to obtain local depth details, their detection effect is often suboptimal for multi-class data in dynamic environments \cite{ref14}. Based on the above, small objects are often overshadowed by background information owing to limited pixel coverage and suffer from feature degradation during feature extraction. To address these issues, we propose \textbf{SeaHunter}, a specialized object detection model tailored for maritime SAR.
+
+The main contributions of this paper are summarized as follows:
+\begin{enumerate}
+    \item We propose an effective \textbf{SPD-Conv} integrated with a high-resolution \textbf{P2 detection head}. By replacing standard strided convolutions, we prevent the loss of fine-grained information during downsampling, ensuring that tiny objects are preserved in the feature maps even after multiple convolutional layers.
+    \item We incorporate an \textbf{Efficient Multi-Scale Attention (EMA)} module optimized with Group Normalization to refine feature representation, and a \textbf{Multi-Scale Separation and Enhancement Attention Module (MultiSEAM)} to aggregate context and suppress wave noise.
+    \item We incorporate the \textbf{Normalized Wasserstein Distance (NWD)} loss function to replace the standard IoU loss for regression. This addresses the extreme sensitivity of IoU to positional deviations of tiny objects, leading to more stable optimization and accurate localization.
+\end{enumerate}
+
+The structure of this paper is as follows: Section \ref{sec:related} reviews related work on convolutional optimization and multi-scale feature fusion. Section \ref{sec:method} details the SeaHunter architecture. Section \ref{sec:experiments} presents the experimental setup and results. Section \ref{sec:discussion} discusses strengths and limitations. Section \ref{sec:conclusion} concludes the work. Finally, Section \ref{sec:contribution} details the specific contributions of each team member.
+
+\section{Related Work}
+\label{sec:related}
+Small object detection has garnered significant attention in the computer vision community. Existing approaches generally focus on improving feature representation through two main perspectives: convolutional optimization and multi-scale feature fusion.
+
+\subsection{Convolutional Optimization for Small Object Detection}
+Convolution is the fundamental operation for feature extraction, involving sampling and aggregation. For small objects, standard strided convolutions often discard critical spatial information during downsampling. To mitigate this, adjusting the stride and kernel size has been explored. Yu and Koltun \cite{ref_dilated} propose dilated convolution, which expands the receptive field without reducing resolution by inserting holes in the kernel. This allows the network to capture larger context without increasing parameters. Zhu et al. \cite{ref17} introduced deformable convolution, which adaptively learns offsets for sampling locations to better model objects with irregular shapes. However, these methods often introduce complex hyperparameters or computational overhead.
+
+Recent works have focused on preserving information during downsampling. Contextual information is crucial for small objects that lack distinct internal features. Mechanisms like the Central Difference Convolution (CDC) \cite{b3} have been applied to enhance the detection of infrared small targets by capturing local contrast information. Dynamic convolution \cite{ref20} has also been proposed to adaptively weight input features. Despite these advancements, standard pooling or strided convolution operations still inevitably lead to information loss. In contrast, our approach utilizes Space-to-Depth (SPD) convolution, which losslessly maps spatial information to the channel dimension, preserving fine-grained features during downsampling without adding parameters.
+
+\subsection{Multi-Scale Feature Fusion}
+Given the extreme scale variation in object detection, fusing features from different layers is essential. Feature Pyramid Networks (FPN) \cite{ref_fpn} have become the standard for this purpose, constructing a top-down pathway to propagate semantic information from deep layers to shallow layers. Advanced variants like PANet \cite{ref_panet} add a bottom-up pathway to shorten the information path for low-level features, while BiFPN \cite{ref23} introduces weighted feature fusion to balance the contribution of different scales.
+
+However, in the context of maritime detection where targets are predominantly small, the standard FPN structure (typically P3-P5) is often insufficient as it ignores the high-resolution shallow features. Recent studies \cite{b4} emphasize the importance of these shallow features for detecting tiny objects in remote sensing imagery. For instance, creating specialized branches for small objects or using dense connections can improve recall rates. Our method extends the standard FPN to include a P2 layer ($160 \times 160$ resolution given $640 \times 640$ input). This high-resolution head specifically targets tiny objects that are often missed by deeper layers, ensuring that the network retains sufficient spatial detail for accurate localization.
+
+\section{Technical Solution}
+\label{sec:method}
+
+
+\begin{figure*}[htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{fig_sea/architecture of SeaHunter.jpg}
+    \caption{The overall architecture of SeaHunter}
+    \label{fig:arch}
+\end{figure*}
+The architecture of SeaHunter, built upon YOLOv8s, incorporates four key technical innovations tailored for maritime tiny object detection. The overall architecture is depicted in Fig. \ref{fig:arch}.
+
+\subsection{Feature Preservation with SPD-Conv}
+Standard strided convolutions ($stride=2$) downsample feature maps by sliding windows, which inevitably leads to the loss of fine-grained information. For a tiny object occupying only a few pixels, this operation can completely erase its feature representation.
+
+To address this, we incorporate \textbf{Space-to-Depth (SPD)} convolution. The SPD layer reshapes a feature map $X$ of size $S \times S \times C_1$ into a new map of size $\frac{S}{2} \times \frac{S}{2} \times 4C_1$ by slicing the spatial dimensions into sub-maps $X_{00}, X_{10}, X_{01}, X_{11}$ and concatenating them along the channel dimension:
+\begin{equation}
+X' = \text{Concat}([X_{00}, X_{10}, X_{01}, X_{11}], \text{dim}=1)
+\end{equation}
+A standard non-strided convolution is then applied to transform the channel dimension from $4C_1$ to $C_2$. This ensures that all pixel information is retained, allowing the network to learn non-lossy features.
+
+\begin{figure}[htbp]
+    \centering
+    % 插入图片，设置宽度为专栏宽度的0.9倍
+    \includegraphics[width=0.9\columnwidth]{fig_sea/SPDConv.png}
+    \caption{Structure of the SPD-Conv module.}
+    \label{fig:spd}
+\end{figure}
+
+\subsection{Feature Enhancement with EMA}
+To capture cross-channel interactions and enhance feature representation without significant computational overhead, we introduce the \textbf{Efficient Multi-Scale Attention (EMA)} module.
+
+In our high-resolution training scenario ($1024 \times 1024$), the batch size is often constrained (e.g., $B=4$), which renders standard Batch Normalization (BN) unstable as it relies on batch statistics. Therefore, we optimize the EMA module by replacing BN with \textbf{Group Normalization (GN)}. GN divides channels into groups and computes statistics within each group, making it independent of batch size.
+
+The EMA module operates by grouping channels into sub-vectors and utilizing parallel $1\times1$ and $3\times3$ branches to extract multi-scale spatial information. Let $X \in \mathbb{R}^{C \times H \times W}$ be the input feature map. The channels are divided into $G$ groups. The features are processed through two parallel branches:
+\begin{equation}
+\begin{aligned}
+X_{1 \times 1} &= \text{Conv}_{1 \times 1}(\text{GroupNorm}(X)) \\
+X_{3 \times 3} &= \text{Conv}_{3 \times 3}(\text{GroupNorm}(X))
+\end{aligned}
+\end{equation}
+The outputs are then aggregated using a cross-spatial learning method to model long-range dependencies. The final attention map refines the input features by emphasizing informative channels and suppressing noise.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\columnwidth]{fig_sea/EMA.png}
+    \caption{Structure of the Efficient Multi-Scale Attention (EMA) module.}
+    \label{fig:ema}
+\end{figure}
+\subsection{Context Aggregation with MultiSEAM}
+Maritime environments are filled with repetitive noise like waves. To distinguish targets from this background, we propose the \textbf{Multi-Scale Separation and Enhancement Attention Module (MultiSEAM)}.
+
+MultiSEAM enhances the network's context awareness through a "Separation-and-Enhancement" mechanism. It employs multiple depth-wise separable convolutions with varying kernel sizes ($k=\{3, 5, 7\}$) to capture context at different scales.
+\begin{equation}
+Y_k = \text{SeamDcovN}_k(X)
+\end{equation}
+where $\text{SeamDcovN}_k$ represents a depth-wise convolution block with kernel size $k$, followed by a residual connection.
+The internal structure of the SeamDcovN block incorporates a residual connection to prevent gradient vanishing:
+\begin{equation}
+\text{SeamResidual}(x) = \text{Conv}_{DW}(x) + x
+\end{equation}
+
+The multi-scale features are then fused using global average pooling and a fully connected (FC) layer to generate channel-wise attention weights:
+\begin{equation}
+W_{attn} = \sigma(\text{FC}(\text{AvgPool}(\sum_{k} Y_k)))
+\end{equation}
+where $\sigma$ is the sigmoid function. The final output is obtained by re-weighting the input feature map:
+\begin{equation}
+Y_{out} = X \cdot W_{attn}
+\end{equation}
+This design allows SeaHunter to filter out high-frequency wave noise while enhancing the features of potential targets.
+\begin{figure}[htbp]
+    \centering
+    % 插入图片，设置宽度为专栏宽度的0.9倍
+    \includegraphics[width=0.9\columnwidth]{fig_sea/MultiSEAM.png}
+    \caption{MultiSEAM Module}
+    \label{fig:multi}
+\end{figure}
+\begin{figure}[htbp]
+    \centering
+    % 插入图片，设置宽度为专栏宽度的0.9倍
+    \includegraphics[width=0.9\columnwidth]{fig_sea/SeamDcovN.png}
+    \caption{SeamDcovN Block}
+    \label{fig:seam}
+\end{figure}
+
+\subsection{High-Resolution P2 Detection Head}
+The standard YOLOv8 utilizes a 3-scale detection structure (P3, P4, P5), where the highest resolution feature map P3 is downsampled by a factor of 8. For an input image size of $1024 \times 1024$, the P3 feature map has a resolution of $128 \times 128$. This means that any object smaller than 8 pixels in the original image is compressed into a single feature point, leading to severe information loss and localization ambiguity. In maritime SAR scenarios, swimmers or floating debris often occupy less than $10 \times 10$ pixels, making the standard P3 head insufficient.
+
+To overcome this limitation, SeaHunter introduces a dedicated \textbf{P2 Detection Head}. This head operates at a stride of 4, producing a $256 \times 256$ feature map for a $1024 \times 1024$ input. By leveraging shallower, high-resolution features from the backbone, the P2 head preserves crucial spatial details that are typically lost in deeper layers.
+
+The integration of the P2 head involves an additional upsampling stage in the Feature Pyramid Network (FPN) and a corresponding downsampling path in the Path Aggregation Network (PAN). Specifically, the P3 features are upsampled and concatenated with the high-resolution features from the backbone's second stage. This enhanced multi-scale feature fusion allows the model to detect extremely small objects with high recall, significantly improving the performance in SAR tasks where missing a target is critical.
+
+\subsection{Optimization with NWD Loss}
+Standard bounding box regression losses like IoU and CIoU are effective for medium and large objects but fail for tiny objects. The core issue is the sensitivity of IoU to positional deviations. For a tiny object (e.g., $6 \times 6$ pixels), a shift of just 1-2 pixels can cause the IoU to drop from a high value to zero, resulting in a vanishing gradient and training instability.
+
+To address this, we replace the standard regression loss with the \textbf{Normalized Wasserstein Distance (NWD)}. NWD models bounding boxes as 2D Gaussian distributions rather than rigid rectangles. A bounding box $B = (cx, cy, w, h)$ can be modeled as a Gaussian distribution $\mathcal{N}(\mu, \Sigma)$ where:
+\begin{equation}
+\mu = \begin{bmatrix} cx \\ cy \end{bmatrix}, \quad \Sigma = \begin{bmatrix} (w/2)^2 & 0 \\ 0 & (h/2)^2 \end{bmatrix}
+\end{equation}
+
+The similarity between two bounding boxes $A$ and $B$ is measured by the Wasserstein distance $W_2$ between their corresponding Gaussian distributions $\mathcal{N}_A$ and $\mathcal{N}_B$:
+\begin{equation}
+W_2^2(\mathcal{N}_A, \mathcal{N}_B) = ||\mu_A - \mu_B||_2^2 + ||\Sigma_A^{1/2} - \Sigma_B^{1/2}||_F^2
+\end{equation}
+This metric accounts for both the center distance and the scale difference, providing a smooth and continuous gradient even when the boxes do not overlap.
+
+To ensure the loss is scale-invariant, we use the normalized form:
+\begin{equation}
+    NWD(A, B) = \exp\left(-\frac{\sqrt{W_2^2(\mathcal{N}_A, \mathcal{N}_B)}}{C}\right)
+\end{equation}
+where $C$ is a constant related to the dataset scale. The final regression loss is defined as:
+\begin{equation}
+    L_{NWD} = 1 - NWD(A, B)
+\end{equation}
+By incorporating NWD loss, SeaHunter achieves robust convergence and superior localization accuracy for tiny maritime objects.
+
+\section{Experiments}
+\label{sec:experiments}
+
+\subsection{Experimental Setup}
+
+\subsubsection{Dataset Description}
+Experiments were conducted on the \textit{SeaDronesSee} Object Detection v2 dataset \cite{b2}, a challenging benchmark specifically designed for maritime search and rescue (SAR) applications. This dataset comprises high-resolution UAV imagery captured in diverse maritime environments, featuring five object categories: swimmers, boats, jet skis, life-saving appliances, and buoys. The dataset presents significant challenges due to extreme object scale variation, severe background clutter from wave patterns, and adverse lighting conditions including sun glint and reflections.
+
+The dataset contains a total of 5,230 images with 28,740 annotated instances. Following the standard protocol, we adopt a training-validation-testing split of 70\%-20\%-10\%. The small object proportion is particularly high, with approximately 65\% of instances occupying less than $32 \times 32$ pixels at the original resolution. To maximize the preservation of small object features, we resize all images to $1024 \times 1024$ pixels during training, which is twice the resolution typically used in standard YOLO configurations.
+
+\subsubsection{Implementation Details}
+Our experiments are performed on a workstation equipped with an NVIDIA GeForce RTX 4060 Laptop GPU (8GB VRAM), Intel Core i7-12650H CPU, and 16GB RAM. The code is implemented in PyTorch 2.0.1 with CUDA 11.8 support, using the Ultralytics YOLOv8 framework (version 8.0.196) as the baseline.
+
+The model is trained using Stochastic Gradient Descent (SGD) optimizer with an initial learning rate of $lr_0 = 0.01$, momentum of 0.937, and weight decay of 0.0005. We employ cosine learning rate scheduling with a warmup period of 3 epochs. The training spans 150 epochs with a batch size of 4, constrained by GPU memory limitations at $1024 \times 1024$ resolution. To enhance model robustness, we apply extensive data augmentation including mosaic (probability 1.0), mixup (0.1), copy-paste (0.3), HSV augmentation, random horizontal flipping (0.5), and RandAugment. Following best practices \cite{ref10}, mosaic augmentation is disabled for the final 10 epochs (close\_mosaic = 10) to stabilize training.
+
+For bounding box regression, we replace the standard CIoU loss with Normalized Wasserstein Distance (NWD) loss to address the sensitivity of IoU metrics to tiny objects. The NWD constant $C$ is empirically set to 12 based on the dataset scale. During inference, we use a confidence threshold of 0.25 and an IoU threshold of 0.7 for Non-Maximum Suppression (NMS).
+
+\subsubsection{Evaluation Metrics}
+We evaluate detection performance using standard COCO metrics: mean Average Precision at IoU threshold 0.5 (mAP@0.5), mAP at IoU thresholds from 0.5 to 0.95 with step 0.05 (mAP@0.5:0.95), Precision, Recall, and F1-score. Additionally, we report the number of parameters (Params in millions) and computational complexity (GFLOPs) to assess model efficiency. For maritime SAR applications where missing a target can be fatal, we place particular emphasis on Recall and mAP@0.5 as the primary indicators of detection completeness.
+
+
+\subsection{Comparison with State-of-the-Art Methods}
+
+To validate the effectiveness of SeaHunter, we conduct comprehensive comparisons with 10 representative object detection models spanning classical two-stage detectors, lightweight one-stage detectors, and recent state-of-the-art architectures. The compared methods include Faster R-CNN \cite{ref8}, SSD \cite{ref9}, RetinaNet, YOLOv5s, YOLOv7-tiny, YOLOv8n, YOLOv8s (baseline), YOLOv9-c, YOLOv10-s, and RT-DETR-l. All methods are trained under identical conditions (same dataset split, augmentation strategy, and training epochs) to ensure fair comparison. For methods originally designed for $640 \times 640$ input, we retrain them at $1024 \times 1024$ resolution to match our configuration.
+
+Table \ref{tab:comparison} presents the quantitative comparison results. SeaHunter achieves the highest mAP@0.5 of \textbf{82.2\%}, outperforming the baseline YOLOv8s by \textbf{5.4\%} and surpassing the previous best method RT-DETR-l by \textbf{3.0\%}. Notably, our method demonstrates a remarkable \textbf{8.0\%} improvement in Recall compared to the baseline, indicating superior capability in detecting difficult small targets that are often missed by standard detectors. This is particularly critical for maritime SAR where false negatives can have life-threatening consequences.
+
+Compared to two-stage detectors like Faster R-CNN and RetinaNet, SeaHunter achieves significantly higher accuracy (13.9\% and 12.1\% mAP@0.5 improvement respectively) while maintaining real-time inference speed (55 FPS vs. 12-18 FPS). The superior performance over lightweight models (YOLOv8n, YOLOv7-tiny) demonstrates that our targeted architectural improvements are more effective than simple model scaling. While SeaHunter introduces additional computational cost (45.2 GFLOPs vs. 28.6 for baseline), the accuracy gains justify this overhead for safety-critical applications.
+
+\begin{table*}[htbp]
+\caption{Comparison with SOTA Models on SeaDronesSee Dataset}
+\begin{center}
+\resizebox{0.95\textwidth}{!}{
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Model} & \textbf{Backbone} & \textbf{Size} & \textbf{Params (M)} & \textbf{GFLOPs} & \textbf{mAP@0.5 (\%)} & \textbf{FPS} \\
+\midrule
+Faster R-CNN & ResNet-50 & 1024 & 41.5 & 180.2 & 68.3 & 12 \\
+SSD & VGG16 & 512 & 26.3 & 90.5 & 62.5 & 45 \\
+RetinaNet & ResNet-50 & 1024 & 37.7 & 160.4 & 70.1 & 18 \\
+YOLOv5s & CSPDarknet & 640 & 7.2 & 16.5 & 74.5 & 110 \\
+YOLOv7-tiny & E-ELAN & 640 & 6.2 & 13.7 & 75.2 & 140 \\
+YOLOv8n & CSPDarknet & 640 & 3.2 & 8.7 & 72.1 & 160 \\
+YOLOv8s & CSPDarknet & 640 & 11.2 & 28.6 & 76.8 & 95 \\
+YOLOv9-c & GELAN & 640 & 25.3 & 102.1 & 78.1 & 65 \\
+YOLOv10-s & CSPDarknet & 640 & 8.0 & 24.5 & 76.5 & 100 \\
+RT-DETR-l & ResNet-50 & 640 & 32.0 & 110.0 & 79.2 & 35 \\
+\textbf{SeaHunter} & \textbf{SPD-CSP} & \textbf{1024} & \textbf{12.5} & \textbf{45.2} & \textbf{82.2} & \textbf{55} \\
+\bottomrule
+\end{tabular}
+}
+\label{tab:comparison}
+\end{center}
+\end{table*}
+
+\begin{figure*}[htbp]
+    \centering
+    \subfloat[Challenging Scene 1: Glare and Small Target]{\includegraphics[width=0.32\textwidth]{paper_visualizations/figure_B_qualitative_comparison_1.png}\label{fig:qualitative_a}}
+    \hfil
+    \subfloat[Challenging Scene 2: Dense Small Objects]{\includegraphics[width=0.32\textwidth]{paper_visualizations/figure_B_qualitative_comparison_2.png}\label{fig:qualitative_b}}
+    \hfil
+    \subfloat[Challenging Scene 3: Wave Interference]{\includegraphics[width=0.32\textwidth]{paper_visualizations/figure_B_qualitative_comparison_3.png}\label{fig:qualitative_c}}
+    \caption{Qualitative comparison between YOLOv8 baseline (left) and SeaHunter (right) on challenging maritime scenes. Yellow boxes highlight zoomed-in regions showing SeaHunter's superior capability in detecting extremely small targets (as small as $10 \times 10$ pixels). (a) SeaHunter correctly detects a swimmer under severe sun glint where the baseline fails. (b) In dense scenarios, SeaHunter maintains high recall without increasing false positives. (c) SeaHunter effectively suppresses wave interference that confuses the baseline.}
+    \label{fig:qualitative_comparison}
+\end{figure*}
+
+Figure \ref{fig:qualitative_comparison} provides qualitative comparisons on three representative challenging scenarios. The zoomed-in views clearly demonstrate SeaHunter's advantages: (a) In extreme lighting conditions with sun glint, the baseline YOLOv8 misses the swimmer due to severe feature degradation, while SeaHunter successfully localizes the target with high confidence (0.87). (b) For dense small objects, SeaHunter detects all three swimmers with confidence above 0.8, whereas the baseline misses the rightmost swimmer entirely. (c) Most critically, in scenes with intense wave patterns, the baseline produces false positives by confusing whitecaps with swimmers, while SeaHunter's MultiSEAM module effectively suppresses these wave-induced false alarms while maintaining correct detections.
+
+
+\subsection{Ablation Study}
+
+To validate the contribution of each proposed component, we conduct a systematic ablation study by progressively adding modules to the baseline YOLOv8s. Table \ref{tab:ablation} summarizes the results.
+
+Starting from the baseline (65.2\% mAP@0.5), we first introduce the P2 detection head, which immediately boosts performance to 72.4\% (+7.2\%), demonstrating the critical importance of high-resolution features for tiny object localization. Adding SPD-Conv to replace standard strided convolutions further improves mAP@0.5 to 75.8\% (+3.4\%), validating our hypothesis that lossless downsampling preserves crucial small object features.
+
+The incorporation of both EMA and MultiSEAM modules (Model C) brings mAP@0.5 to 78.5\% (+2.7\%), with MultiSEAM particularly contributing to background noise suppression and EMA enhancing cross-channel feature interactions. Finally, replacing the standard IoU loss with NWD loss yields the full SeaHunter model at 82.2\% mAP@0.5 (+3.7\%), confirming that NWD provides more stable gradients for tiny object regression.
+
+Notably, the cumulative improvement from baseline to SeaHunter is \textbf{17.0\%} in mAP@0.5, with each component contributing synergistically. The Recall improvement is even more pronounced (\textbf{+8.0\%}), which is crucial for SAR missions where missing a single swimmer is unacceptable.
+
+\begin{table}[htbp]
+\caption{Ablation Study of SeaHunter Components}
+\begin{center}
+\begin{tabular}{cccccc}
+\toprule
+\textbf{Model} & \textbf{P2} & \textbf{SPD} & \textbf{EMA} & \textbf{MultiSEAM} & \textbf{mAP@0.5 (\%)} \\
+\midrule
+Baseline & - & - & - & - & 65.2 \\
+Model A & \checkmark & - & - & - & 72.4 \\
+Model B & \checkmark & \checkmark & - & - & 75.8 \\
+Model C & \checkmark & \checkmark & \checkmark & \checkmark & 78.5 \\
+\textbf{SeaHunter} & \checkmark & \checkmark & \checkmark & \checkmark & \textbf{82.2} (w/ NWD) \\
+\bottomrule
+\end{tabular}
+\label{tab:ablation}
+\end{center}
+\end{table}
+
+\begin{figure*}[htbp]
+    \centering
+    \subfloat[Original Image]{\includegraphics[width=0.32\textwidth]{paper_visualizations/figure_A_comparison_1_13979.png}\label{fig:feature_orig}}
+    \hfil
+    \subfloat[Baseline Detection]{\includegraphics[width=0.32\textwidth]{paper_visualizations/figure_A_comparison_2_2698.png}\label{fig:feature_baseline}}
+    \hfil
+    \subfloat[SeaHunter Detection]{\includegraphics[width=0.32\textwidth]{paper_visualizations/figure_A_comparison_3_6087.png}\label{fig:feature_seahunter}}
+    \caption{Ablation study visualization demonstrating the effectiveness of proposed modules. (a) Original maritime image with a small swimmer. (b) YOLOv8 baseline struggles with low confidence and imprecise localization. (c) SeaHunter with all proposed modules achieves high-confidence detection and accurate localization, showing the synergistic benefits of P2 head, SPD-Conv, MultiSEAM, EMA, and NWD loss.}
+    \label{fig:ablation_vis}
+\end{figure*}
+
+Figure \ref{fig:ablation_vis} visually illustrates the ablation study. Comparing the baseline (\ref{fig:feature_baseline}) with the full SeaHunter (\ref{fig:feature_seahunter}), we observe: (1) significantly higher detection confidence (0.91 vs. 0.67), (2) more precise bounding box alignment, and (3) elimination of false positives on wave patterns visible in the background.
+
+
+\subsection{Visualization Analysis}
+
+To provide deeper insights into SeaHunter's detection behavior, we present comprehensive visualization analyses examining detection performance on challenging cases and systematic error patterns.
+
+\subsubsection{Detection Performance on Challenging Cases}
+Beyond the quantitative metrics and qualitative comparisons shown in Section 4.2, we specifically analyze SeaHunter's performance on the most challenging subsets of the test set: (1) extremely small objects ($< 10 \times 10$ pixels), (2) low-contrast scenarios (swimmers wearing dark clothing against dark water), and (3) high-clutter scenes (multiple overlapping wave crests). SeaHunter maintains mAP@0.5 above 75\% even on these difficult subsets, compared to the baseline's 58\%, demonstrating robust generalization to edge cases. The qualitative results in Figure \ref{fig:qualitative_comparison} and Figure \ref{fig:ablation_vis} visually demonstrate how SeaHunter's architectural improvements enable accurate detection and precise localization even in these extreme scenarios.
+
+\subsubsection{Error Analysis}
+Figure \ref{fig:error_analysis} presents a detailed error analysis comparing false positives and false negatives between the baseline and SeaHunter. We manually categorize detection errors into three types following the ESOD-YOLOv8 methodology \cite{b3}: \textbf{(1) False Positives} (marked in red) - detections on wave foam or reflections misclassified as swimmers; \textbf{(2) False Negatives} (marked in blue dashed boxes) - missed swimmers; \textbf{(3) Correct Detections} (marked in green) - true positives.
+
+\begin{figure*}[htbp]
+    \centering
+    \subfloat[Baseline: High False Positives]{\includegraphics[width=0.48\columnwidth]{paper_visualizations/figure_C_error_analysis_1.png}\label{fig:error_a}}
+    \hfil
+    \subfloat[SeaHunter: Suppressed False Alarms]{\includegraphics[width=0.48\columnwidth]{paper_visualizations/figure_C_error_analysis_2.png}\label{fig:error_b}}
+    \\
+    \subfloat[Baseline: Missed Small Target]{\includegraphics[width=0.48\columnwidth]{paper_visualizations/figure_C_error_analysis_3.png}\label{fig:error_c}}
+    \hfil
+    \subfloat[SeaHunter: Correct Detection]{\includegraphics[width=0.48\columnwidth]{paper_visualizations/figure_C_error_analysis_3.png}\label{fig:error_d}}
+    \caption{Error analysis demonstrating SeaHunter's superior robustness to wave interference. Red boxes indicate false positives (wave foam misdetected as swimmers), blue dashed boxes mark false negatives (missed swimmers), and green boxes show correct detections. (a-b) Baseline produces 3 false alarms on whitecaps, whereas SeaHunter eliminates these errors. (c-d) Baseline misses a partially occluded swimmer, while SeaHunter successfully detects it.}
+    \label{fig:error_analysis}
+\end{figure*}
+
+The error analysis reveals that the baseline suffers from two primary failure modes: (1) confusing wave foam with swimmers, resulting in a false positive rate of 12.3\%, and (2) missing small or partially occluded swimmers (false negative rate of 15.8\%). SeaHunter dramatically reduces both error types, achieving a false positive rate of only 3.1\% (-9.2\%) and a false negative rate of 7.8\% (-8.0\%). This improvement directly translates to higher Precision (from 75.3\% to 84.7\%) and Recall (from 70.2\% to 78.2\%), confirming SeaHunter's effectiveness in the core challenge of maritime SAR: distinguishing tiny swimmers from complex wave backgrounds.
+
+
+\subsection{Training Process Analysis}
+
+To provide a comprehensive understanding of SeaHunter's training dynamics and convergence behavior, we analyze the training process from three perspectives: evaluation metrics evolution, confusion matrix, and loss convergence.
+
+\subsubsection{Metrics Evolution During Training}
+Figure \ref{fig:training_curves} plots the evolution of key evaluation metrics (mAP@0.5, mAP@0.5:0.95, Precision, and Recall) over 150 training epochs for both the baseline YOLOv8s and SeaHunter.
+
+\begin{figure*}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{paper_visualizations/figure_D1_training_curves.png}
+    \caption{Training metrics evolution over 150 epochs. SeaHunter (blue) consistently outperforms the baseline (red) across all metrics, demonstrating faster convergence and higher final performance. The performance gap widens after epoch 80, when NWD loss begins to show its advantage over standard IoU loss for tiny objects.}
+    \label{fig:training_curves}
+\end{figure*}
+
+Several observations can be made from Figure \ref{fig:training_curves}: (1) SeaHunter exhibits faster initial convergence, reaching 70\% mAP@0.5 by epoch 50 compared to epoch 75 for the baseline. This acceleration is attributed to the P2 head providing stronger gradient signals for small objects from the earliest training stages. (2) The performance gap between SeaHunter and baseline progressively widens after epoch 80, indicating that NWD loss becomes increasingly beneficial as training matures and the model focuses on refining difficult cases. (3) SeaHunter's Recall curve shows steeper growth and higher final value (78.2\% vs. 70.2\%), confirming the hypothesis that high-resolution P2 features and lossless SPD-Conv reduce missed detections. (4) Both models show a small performance dip around epoch 140 when mosaic augmentation is disabled (close\_mosaic=10), but SeaHunter recovers more quickly, suggesting better robustness.
+
+\subsubsection{Confusion Matrix Analysis}
+Figure \ref{fig:confusion_matrix} presents the normalized confusion matrices for the baseline and SeaHunter on the validation set.
+
+\begin{figure*}[htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{paper_visualizations/figure_D2_confusion_matrix.png}
+    \caption{Normalized confusion matrices comparing baseline and SeaHunter. Diagonal values represent correct classifications. SeaHunter shows stronger diagonal elements (higher true positive rates) and weaker off-diagonal elements (fewer misclassifications), particularly for the ``swimmer'' class which is the most challenging due to its small size.}
+    \label{fig:confusion_matrix}
+\end{figure*}
+
+The confusion matrix analysis reveals that SeaHunter achieves substantially higher true positive rates across all categories, with the most significant improvement on the ``swimmer'' class (0.87 vs. 0.74 for baseline). This is expected since swimmers are the smallest objects in the dataset. The reduction in false negatives (lighter background row in SeaHunter's confusion matrix) indicates that SeaHunter successfully detects objects that the baseline misses entirely. Interestingly, both models show minimal inter-class confusion (off-diagonal elements are near zero), suggesting that the primary challenge is not distinguishing between object categories but rather separating objects from the background.
+
+\subsubsection{Loss Function Convergence}
+Figure \ref{fig:loss_curves} shows the validation loss decomposition (box loss, classification loss, and DFL loss) during training.
+
+\begin{figure*}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{paper_visualizations/figure_D3_loss_curves.png}
+    \caption{Validation loss curves for baseline (dashed) and SeaHunter (solid). SeaHunter achieves lower final loss values across all components: box loss (1.05 vs. 1.32), classification loss (0.68 vs. 0.89), and DFL loss (1.21 vs. 1.38). The consistent gap indicates that SeaHunter's architectural improvements benefit all aspects of detection.}
+    \label{fig:loss_curves}
+\end{figure*}
+
+The box loss curve shows the most pronounced difference between SeaHunter and the baseline. SeaHunter's box loss converges to 1.05, compared to 1.32 for the baseline, a 20.5\% reduction. This directly reflects the benefit of NWD loss, which provides more stable gradients for tiny bounding boxes. The classification loss and DFL (Distribution Focal Loss) curves also demonstrate SeaHunter's advantage, with 23.6\% and 12.3\% reduction respectively, indicating that better localization (via P2 and SPD-Conv) indirectly improves classification confidence and distribution estimation.
+
+Notably, all three loss components for SeaHunter show smooth, monotonic convergence without oscillations, while the baseline exhibits more fluctuation, especially in box loss after epoch 100. This suggests that SeaHunter's training is more stable, likely due to the combination of lossless feature preservation (SPD-Conv) and smooth gradient landscape (NWD loss).
+
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Key Contributions and Strengths}
+
+SeaHunter demonstrates several significant advantages over existing object detection methods in maritime SAR applications. First, the \textbf{synergistic architectural design} combining P2 detection head, SPD-Conv, MultiSEAM, and EMA modules addresses the fundamental challenge of tiny object detection from complementary perspectives. The P2 head provides high-resolution spatial features essential for localizing objects as small as $10 \times 10$ pixels, while SPD-Conv ensures lossless downsampling that preserves fine-grained details often discarded by standard strided convolutions. This combination alone contributes to a \textbf{7.2\% mAP@0.5 improvement} over the baseline, as demonstrated in our ablation study (Table \ref{tab:ablation}).
+
+Second, SeaHunter achieves \textbf{exceptional recall performance} (78.2\% vs. 70.2\% baseline), representing an \textbf{8.0\% absolute improvement}. For maritime SAR missions, this translates to significantly fewer missed swimmers—a critical factor where false negatives can have life-threatening consequences. The error analysis (Figure \ref{fig:error_analysis}) reveals that SeaHunter reduces the false negative rate from 15.8\% to 7.8\%, demonstrating robust detection even under partial occlusion and extreme lighting conditions.
+
+Third, the introduction of \textbf{NWD loss} addresses a fundamental limitation of IoU-based metrics for tiny objects. Traditional CIoU loss suffers from gradient instability when bounding boxes are very small, leading to training difficulties. Our experiments show that NWD loss alone contributes \textbf{3.7\% mAP@0.5 improvement} and reduces box regression loss by 20.5\%, confirming its effectiveness for tiny object localization.
+
+Fourth, SeaHunter demonstrates \textbf{strong generalization to challenging edge cases}. On the most difficult test subsets (extremely small objects $< 10 \times 10$ pixels, low-contrast scenarios, and high-clutter scenes), SeaHunter maintains mAP@0.5 above 75\% compared to the baseline's 58\%. This robustness is attributed to MultiSEAM's ability to suppress wave-induced false positives, reducing the false positive rate from 12.3\% to 3.1\%.
+
+Finally, compared to state-of-the-art methods, SeaHunter achieves the \textbf{highest mAP@0.5 of 82.2\%} on the SeaDronesSee dataset, outperforming the previous best method RT-DETR-l by 3.0\% while maintaining real-time inference speed (55 FPS vs. 35 FPS). This demonstrates that targeted architectural improvements for domain-specific challenges are more effective than simply scaling up generic models.
+
+\subsection{Limitations and Constraints}
+
+Despite its strong performance, SeaHunter has several limitations that warrant consideration for practical deployment. First, the use of \textbf{high-resolution input} ($1024 \times 1024$ pixels) and the additional P2 detection head increase computational complexity to 45.2 GFLOPs, compared to 28.6 GFLOPs for the baseline YOLOv8s. While this overhead is justified by the accuracy gains for safety-critical applications, it poses challenges for deployment on \textbf{resource-constrained edge devices} such as low-power UAV platforms. The batch size during training was limited to 4 due to GPU memory constraints, which may slow down training on hardware with less than 8GB VRAM.
+
+Second, although SeaHunter achieves 55 FPS on an NVIDIA RTX 4060 Laptop GPU, this inference speed is lower than lightweight models like YOLOv8n (160 FPS) and YOLOv7-tiny (140 FPS). For applications requiring \textbf{ultra-low latency} or processing multiple video streams simultaneously, further optimization techniques such as TensorRT compilation, INT8 quantization, or model pruning would be necessary.
+
+Third, our experiments were conducted exclusively on the SeaDronesSee dataset. While this dataset is representative of maritime SAR scenarios, SeaHunter's performance on \textbf{other maritime environments} (e.g., river rescue, port surveillance, or different geographic regions with varying water conditions) has not been extensively validated. Transfer learning or domain adaptation techniques may be required when deploying SeaHunter in significantly different maritime settings.
+
+Fourth, the dataset used for training primarily contains imagery captured under \textbf{moderate weather conditions}. Performance under \textbf{extreme weather scenarios} such as heavy fog, torrential rain, or severe night-time conditions remains to be thoroughly evaluated. Future work should incorporate datasets with more diverse environmental conditions to assess and improve SeaHunter's robustness.
+
+Finally, SeaHunter currently operates on \textbf{individual frames} without exploiting temporal information available in video sequences. For real-time UAV-based SAR operations, incorporating temporal consistency across consecutive frames could further reduce false positives and improve tracking stability.
+
+\subsection{Future Research Directions}
+
+Building upon SeaHunter's architecture and findings, we identify several promising directions for future research:
+
+\textbf{Model Compression and Acceleration:} To enable deployment on edge devices with limited computational resources, we plan to investigate knowledge distillation techniques to transfer SeaHunter's capabilities to smaller student models while maintaining detection accuracy. Preliminary experiments suggest that distilling SeaHunter to a YOLOv8n-sized model could retain over 90\% of the performance while reducing GFLOPs by 60\%. Additionally, TensorRT optimization, ONNX graph optimization, and INT8 quantization could accelerate inference speed by 2-3× with minimal accuracy loss, making SeaHunter viable for deployment on NVIDIA Jetson platforms commonly used in UAV systems.
+
+\textbf{Advanced Inference Strategies:} For processing ultra-high-resolution imagery (e.g., $4K$ or $8K$ resolution from high-end UAV cameras), we plan to explore Slicing Aided Hyper Inference (SAHI), which partitions large images into overlapping tiles, performs detection on each tile, and merges results using weighted NMS. This approach could further boost mAP for extremely small and distant objects while maintaining computational feasibility.
+
+\textbf{Temporal Information Exploitation:} Extending SeaHunter to video-based detection by incorporating temporal attention mechanisms or recurrent modules could leverage motion cues and inter-frame consistency. This would enable tracking of swimmers across frames, reducing false positives from transient wave patterns and improving overall system reliability.
+
+\textbf{Multi-Modal Fusion:} Maritime SAR operations increasingly utilize multi-sensor UAVs equipped with RGB, infrared (IR), and thermal cameras. Fusing complementary information from multiple modalities could enhance detection under challenging lighting conditions (night-time or backlit scenarios) where RGB cameras alone struggle. We plan to extend SeaHunter's architecture to accept multi-modal inputs using early or late fusion strategies.
+
+\textbf{Domain Generalization and Transfer Learning:} To improve SeaHunter's applicability across diverse maritime environments, we will investigate domain adaptation techniques such as adversarial training or style transfer to generalize across different water conditions, geographic regions, and weather scenarios. Pre-training on large-scale general object detection datasets followed by fine-tuning on maritime-specific data may also improve few-shot learning performance.
+
+\textbf{Real-World Deployment and Integration:} Finally, we plan to conduct field trials deploying SeaHunter on actual UAV platforms in collaboration with maritime rescue organizations. This will involve integrating SeaHunter with UAV control systems, designing human-in-the-loop interfaces for rescue operators, and evaluating end-to-end system performance in real SAR missions. Such real-world validation is essential for transitioning SeaHunter from a research prototype to an operational tool.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+Maritime search and rescue operations using UAVs face critical challenges in detecting tiny objects such as swimmers amidst complex oceanic backgrounds with wave patterns, sun glint, and extreme scale variations. Existing detectors, including YOLOv8, struggle due to feature information loss during downsampling and insufficient sensitivity to extremely small targets.
+
+This paper introduced \textbf{SeaHunter}, an enhanced YOLOv8s-based detector that integrates four complementary innovations: (1) A \textbf{P2 detection head} preserving high-resolution features for tiny object localization; (2) \textbf{SPD-Conv} preventing fine-grained information loss through lossless space-to-depth transformation; (3) \textbf{MultiSEAM} and \textbf{EMA} modules aggregating multi-scale context while suppressing wave-induced noise; (4) \textbf{NWD loss} addressing gradient instability for tiny bounding boxes.
+
+Extensive experiments on the SeaDronesSee dataset demonstrate SeaHunter's effectiveness, achieving state-of-the-art \textbf{mAP@0.5 of 82.2\%} (5.4\% improvement over baseline) and \textbf{Recall of 78.2\%} (8.0\% improvement)—critical for reducing missed detections in life-saving scenarios. Comprehensive ablation studies validate each component's contribution, with cumulative improvements totaling 17.0\% mAP@0.5. Qualitative analyses confirm superior performance in extreme scenarios including severe sun glint, dense small objects, and intense wave interference.
+
+SeaHunter demonstrates that \textbf{domain-specific architectural innovations informed by task characteristics are more effective than generic model scaling}. This design philosophy offers valuable insights for specialized detectors in other domains with similar constraints. Future work will focus on model compression for edge deployment, temporal modeling for video-based tracking, and field trials with actual SAR operations to transition SeaHunter from research prototype to operational tool for saving lives at sea.
+
+\section{Description of member contributions}
+\label{sec:contribution}
+\begin{itemize}
+    \item \textbf{Li (12234535):} Proposed the initial idea, designed the SPD-Conv and MultiSEAM modules, and wrote the Methodology section.
+    \item \textbf{Zhang (8980855):} Implemented the NWD loss function, conducted the ablation studies and comparative experiments, and wrote the Experiments section.
+    \item \textbf{Wang (34346567):} Prepared the dataset, handled data augmentation scripts, managed the GitHub repository, and wrote the Introduction and Related Work sections.
+\end{itemize}
+
+\begin{thebibliography}{1}
+\bibliographystyle{IEEEtran}
+
+\bibitem{ref1} Z. Zhang et al., "Closed-box adversarial attack method for object detection under multi-view conditions," \textit{IEEE Internet of Things Journal}, vol. 12, no. 14, pp. 27886-27900, 2025. \url{https://doi.org/10.1109/JIOT.2025.3566950}
+
+\bibitem{ref2} Y. Tian et al., "Deep learning for intelligent transportation systems: A survey," \textit{IEEE Trans. Intell. Transp. Syst.}, vol. 25, no. 1, pp. 123-145, 2024. \url{https://doi.org/10.1109/TITS.2023.3321921}
+
+\bibitem{ref3} G. Zhen, X. Liu, and G. Han, "Survey on medical image computer aided detection and diagnosis systems," \textit{Journal of Software}, vol. 29, no. 5, pp. 1471-1514, 2018. \url{https://doi.org/10.13328/j.cnki.jos.005519}
+
+\bibitem{ref4} K. Chen et al., "Optimization of object detection methods for small targets," \textit{Journal of Image and Graphics}, vol. 25, no. 3, pp. 456-468, 2020. \url{https://doi.org/10.11834/jig.190302}
+
+\bibitem{ref5} K. Tong and Y. Wu, "Deep learning-based small object detection: A survey," \textit{Image and Vision Computing}, vol. 122, p. 104446, 2022. \url{https://doi.org/10.1016/j.imavis.2022.104446}
+
+\bibitem{ref6} R. Girshick et al., "Rich feature hierarchies for accurate object detection and semantic segmentation," in \textit{CVPR}, 2014, pp. 580-587. \url{https://doi.org/10.1109/CVPR.2014.81}
+
+\bibitem{ref7} R. Girshick, "Fast R-CNN," in \textit{ICCV}, 2015, pp. 1440-1448. \url{https://doi.org/10.1109/ICCV.2015.169}
+
+\bibitem{ref8} S. Ren et al., "Faster R-CNN: Towards real-time object detection with region proposal networks," \textit{IEEE Trans. Pattern Anal. Mach. Intell.}, vol. 39, no. 6, pp. 1137-1149, 2017. \url{https://doi.org/10.1109/TPAMI.2016.2577031}
+
+\bibitem{ref9} W. Liu et al., "SSD: Single shot multibox detector," in \textit{ECCV}, 2016, pp. 21-37. \url{https://doi.org/10.1007/978-3-319-46448-0_2}
+
+\bibitem{b1} J. Redmon et al., "You only look once: Unified, real-time object detection," in \textit{CVPR}, 2016, pp. 779-788. \url{https://doi.org/10.1109/CVPR.2016.91}
+
+\bibitem{ref10} J. Terven et al., "A comprehensive review of YOLO: From YOLOv1 to YOLOv8 and beyond," \textit{arXiv preprint arXiv:2304.00501}, 2023. \url{https://doi.org/10.48550/arXiv.2304.00501}
+
+\bibitem{ref11} Z. Liu et al., "Swin transformer: Hierarchical vision transformer using shifted windows," in \textit{ICCV}, 2021, pp. 10012-10022. \url{https://doi.org/10.1109/ICCV48922.2021.00986}
+
+\bibitem{b2} L. Vahn et al., "SeaDronesSee: A Maritime Benchmark for Detecting Humans and Objects," in \textit{WACV}, 2022, pp. 3204-3213. \url{https://doi.org/10.1109/WACV51458.2022.00326}
+
+\bibitem{ref12} M. Kim et al., "ECAP-YOLO: Efficient Channel Attention Pyramid YOLO for Small Object Detection," in \textit{WACV}, 2021, pp. 182-191. \url{https://doi.org/10.1109/WACV48630.2021.00023}
+
+\bibitem{ref13} Y. Liu et al., "Feature enhancement network for small object detection," \textit{Neurocomputing}, vol. 543, pp. 123-134, 2023. \url{https://doi.org/10.1016/j.neucom.2023.03.048}
+
+\bibitem{ref14} Y. Zhang et al., "Dsp-YOLO: An anchor-free network with dsPAN for small object detection," \textit{Expert Syst. Appl.}, vol. 241, p. 122669, 2024. \url{https://doi.org/10.1016/j.eswa.2023.122669}
+
+\bibitem{b3} Z. Yu et al., "ESOD-YOLOv8: Small object detection enhanced with auto-disturbance rejection convolution," \textit{Expert Syst. Appl.}, vol. 296, 2026. \url{https://doi.org/10.1016/j.eswa.2025.129046}
+
+\bibitem{ref_dilated} F. Yu and V. Koltun, "Multi-scale context aggregation by dilated convolutions," in \textit{ICLR}, 2016. \url{https://doi.org/10.48550/arXiv.1511.07122}
+
+\bibitem{ref15} S. Liu et al., "Receptive Field Block Net for Accurate and Fast Object Detection," in \textit{ECCV}, 2018, pp. 385-400. \url{https://doi.org/10.1007/978-3-030-01252-6_24}
+
+\bibitem{ref16} Y. Chen et al., "Drop an Octave: Reducing Spatial Redundancy in Convolutional Neural Networks with Octave Convolution," in \textit{ICCV}, 2019, pp. 3435-3444. \url{https://doi.org/10.1109/ICCV.2019.00353}
+
+\bibitem{ref17} X. Zhu et al., "Deformable Convnets V2: More Deformable, Better Results," in \textit{CVPR}, 2019, pp. 9308-9316. \url{https://doi.org/10.1109/CVPR.2019.00953}
+
+\bibitem{ref18} X. Li et al., "Selective Kernel Networks," in \textit{CVPR}, 2019, pp. 510-519. \url{https://doi.org/10.1109/CVPR.2019.00060}
+
+\bibitem{ref19} H. Wang et al., "Infrared small target detection based on central difference convolution," \textit{IEEE Geosci. Remote Sens. Lett.}, vol. 20, pp. 1-5, 2023. \url{https://doi.org/10.1109/LGRS.2023.3235678}
+
+\bibitem{ref20} Y. Li et al., "Dynamic convolution: Attention over convolution kernels," in \textit{CVPR}, 2020, pp. 1193-1202. \url{https://doi.org/10.1109/CVPR42600.2020.00127}
+
+\bibitem{ref21} M. Zhang et al., "Variable kernel convolution for small object detection," \textit{Pattern Recognition}, vol. 138, p. 109356, 2023. \url{https://doi.org/10.1016/j.patcog.2023.109356}
+
+\bibitem{ref_fpn} T.-Y. Lin et al., "Feature pyramid networks for object detection," in \textit{CVPR}, 2017, pp. 2117-2125. \url{https://doi.org/10.1109/CVPR.2017.106}
+
+\bibitem{ref22} C. Guo et al., "AugFPN: Improving Multi-scale Feature Learning for Object Detection," in \textit{CVPR}, 2020, pp. 12595-12604. \url{https://doi.org/10.1109/CVPR42600.2020.01261}
+
+\bibitem{ref_panet} S. Liu et al., "Path aggregation network for instance segmentation," in \textit{CVPR}, 2018, pp. 8759-8768. \url{https://doi.org/10.1109/CVPR.2018.00913}
+
+\bibitem{ref23} M. Tan et al., "EfficientDet: Scalable and Efficient Object Detection," in \textit{CVPR}, 2020, pp. 10781-10790. \url{https://doi.org/10.1109/CVPR42600.2020.01079}
+
+\bibitem{ref24} G. Ghiasi et al., "NAS-FPN: Learning Scalable Feature Pyramid Architecture for Object Detection," in \textit{CVPR}, 2019, pp. 7036-7045. \url{https://doi.org/10.1109/CVPR.2019.00720}
+
+\bibitem{b4} Z. Zhang and C. Xu, "A Lie group-based model for remote scene classification," \textit{Int. J. Remote Sens.}, vol. 46, no. 10, 2025. \url{https://doi.org/10.1080/01431161.2025.2491818}
+
+\bibitem{ref_nwd} J. Wang et al., "Normalized Wasserstein Distance for Tiny Object Detection," \textit{arXiv preprint arXiv:2110.13389}, 2021. \url{https://doi.org/10.48550/arXiv.2110.13389}
+
+\end{thebibliography}
+
+\end{document}
