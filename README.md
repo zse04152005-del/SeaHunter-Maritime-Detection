@@ -78,22 +78,16 @@ pip install -r requirements.txt
 
 ### 2. Pretrained Models
 
-Download the SeaHunter pretrained weights:
+The SeaHunter pretrained model is included in this repository:
 
-| Model | Size | mAP@0.5 | Download Link |
-|-------|------|---------|---------------|
-| **SeaHunter (best.pt)** | 62 MB | 82.2% | [Google Drive](#) / [百度网盘](#) |
-| YOLOv8s Baseline | 22 MB | 76.8% | [Ultralytics](https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8s.pt) |
+| Model | Size | mAP@0.5 | Location |
+|-------|------|---------|----------|
+| **SeaHunter (best.pt)** | 62 MB | 82.2% | `weights/seahunter_best.pt` |
+| YOLOv8s Baseline | 22 MB | 76.8% | [Download](https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8s.pt) |
 
-**Directory Structure After Download:**
+**Model is ready to use!** No additional download needed. The weights are located at:
 ```
-SeaHunter-Maritime-Detection/
-├── weights/
-│   ├── seahunter_best.pt          # ⬅️ Place downloaded model here
-│   └── yolov8s.pt                 # Baseline (optional)
-├── yolo_source/                    # Modified YOLOv8 source code
-├── run_ablation.py                 # Training script
-└── test_seahunter.py               # Inference script
+weights/seahunter_best.pt
 ```
 
 ---

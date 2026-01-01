@@ -1,0 +1,45 @@
+# YOLOv8-UAV Ultimate Model (Fixed Version)
+# Innovations:
+# 1. SPD-Conv (Backbone): 提精度 (无损下采样)
+# 2. SimAM (Neck): 抗干扰 (注意力机制)
+# 3. Slim-Neck (GSConv/VoVGSCSP): 轻量化 (降参数)
+
+# Parameters
+nc: 5  # classes
+scales: # model compound scaling constants, i.e. 'n', 's', 'm', 'l', 'x'
+  n: [0.33, 0.25, 1024]
+
+# Backbone
+backbone:
+  # [from, repeats, module, args]
+  - [-1, 1, Conv, [64, 3, 2]]  # 0-P1/2
+  - [-1, 1, Conv, [128, 3, 2]] # 1-P2/4
+  - [-1, 3, C2f, [128, True]]  # 2
+  - [-1, 1, SPDConv, [256]]    # 3-P3/8  <--- 创新点1: SPD-Conv
+  - [-1, 6, C2f, [256, True]]  # 4
+  - [-1, 1, SPDConv, [512]]    # 5-P4/16 <--- 创新点1: SPD-Conv
+  - [-1, 6, C2f, [512, True]]  # 6
+  - [-1, 1, SPDConv, [1024]]   # 7-P5/32 <--- 创新点1: SPD-Conv
+  - [-1, 3, C2f, [1024, True]] # 8
+  - [-1, 1, SPPF, [1024, 5]]   # 9
+  - [-1, 1, SimAM, [1e-4]]     # 10      <--- 创新点2: SimAM (Backbone出口)
+
+# Head (Slim-Neck 架构)
+head:
+  - [-1, 1, nn.Upsample, [None, 2, 'nearest']]
+  - [[-1, 6], 1, Concat, [1]] # cat backbone P4
+  - [-1, 3, VoVGSCSP, [512]]  # 13 <--- 创新点3: VoVGSCSP (轻量化 C2f)
+
+  - [-1, 1, nn.Upsample, [None, 2, 'nearest']]
+  - [[-1, 4], 1, Concat, [1]] # cat backbone P3
+  - [-1, 3, VoVGSCSP, [256]]  # 16 (P3/8-small) <--- 创新点3: VoVGSCSP
+
+  - [-1, 1, GSConv, [256, 3, 2]] # 17 <--- 创新点3: GSConv (轻量化下采样)
+  - [[-1, 13], 1, Concat, [1]]   # cat head P4
+  - [-1, 3, VoVGSCSP, [512]]     # 19 (P4/16-medium)
+
+  - [-1, 1, GSConv, [512, 3, 2]] # 20 <--- 创新点3: GSConv
+  - [[-1, 10], 1, Concat, [1]]   # cat backbone P5 (注意: 连第10层 SimAM)
+  - [-1, 3, VoVGSCSP, [1024]]    # 22 (P5/32-large)
+
+  - [[16, 19, 22], 1, Detect, [nc]] # Detect(P3, P4, P5)

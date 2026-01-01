@@ -1,0 +1,59 @@
+# YOLOv8-SeaHunter-Ultimate
+# 1. Base: YOLOv8s (Small) - 脑容量更大
+# 2. Backbone: SPD-Conv (你的原生代码) + MultiSEAM (Context) + EMA (Attention)
+# 3. Head: P2 + P3 + P4 + P5 (4头检测，死磕微小目标)
+# 4. Neck: 标准 C2f (放弃GSConv，追求极致精度)
+
+# 参数
+nc: 5  # 你的类别数
+scales: # 使用 Small 模型的缩放因子
+  s: [0.33, 0.50, 1024] 
+
+# === 主干网络 (Backbone) ===
+backbone:
+  # [from, repeats, module, args]
+  - [-1, 1, Conv, [64, 3, 2]]  # 0-P1/2
+  - [-1, 1, Conv, [128, 3, 2]] # 1-P2/4 (P2特征层)
+  - [-1, 3, C2f, [128, True]]  # 2 (这里是我们要连接的 P2)
+  - [-1, 1, SPDConv, [256]]    # 3-P3/8 (使用 SPD 无损下采样)
+  - [-1, 6, C2f, [256, True]]  # 4
+  - [-1, 1, SPDConv, [512]]    # 5-P4/16 (使用 SPD 无损下采样)
+  - [-1, 6, C2f, [512, True]]  # 6
+  - [-1, 1, SPDConv, [1024]]   # 7-P5/32 (使用 SPD 无损下采样)
+  - [-1, 3, C2f, [1024, True]] # 8
+  - [-1, 1, MultiSEAM, [1024]] # 9 (SEAM Context - 解决海浪背景)
+  - [-1, 1, EMA, [1024]]       # 10 (EMA Attention - 聚焦目标)
+
+# === 颈部与头部 (Neck & Head) ===
+head:
+  # --- 上采样阶段 (FPN) ---
+  - [-1, 1, nn.Upsample, [None, 2, 'nearest']]
+  - [[-1, 6], 1, Concat, [1]] # cat P4
+  - [-1, 3, C2f, [512]]       # 13
+
+  - [-1, 1, nn.Upsample, [None, 2, 'nearest']]
+  - [[-1, 4], 1, Concat, [1]] # cat P3
+  - [-1, 3, C2f, [256]]       # 16
+
+  # === P2 Head 关键层 (继续上采样) ===
+  - [-1, 1, nn.Upsample, [None, 2, 'nearest']]
+  - [[-1, 2], 1, Concat, [1]] # cat P2 (连接到第2层)
+  - [-1, 3, C2f, [128]]       # 19 (P2-Tiny Head - 专门检测极小目标)
+  # =================================
+
+  # --- 下采样阶段 (PAN) ---
+  - [-1, 1, Conv, [128, 3, 2]] # 下采样 (回归标准Conv，保精度)
+  - [[-1, 16], 1, Concat, [1]] # cat P3
+  - [-1, 3, C2f, [256]]        # 22 (P3 检测头)
+
+  - [-1, 1, Conv, [256, 3, 2]]
+  - [[-1, 13], 1, Concat, [1]] # cat P4
+  - [-1, 3, C2f, [512]]        # 25 (P4 检测头)
+
+  - [-1, 1, Conv, [512, 3, 2]]
+  - [[-1, 10], 1, Concat, [1]] # cat P5 (连接 Backbone 末尾)
+  - [-1, 3, C2f, [1024]]       # 28 (P5 检测头)
+
+  # === 检测头 (Detect) ===
+  # 输入变成 4 层: [19(P2), 22(P3), 25(P4), 28(P5)]
+  - [[19, 22, 25, 28], 1, Detect, [nc]]

@@ -62,7 +62,8 @@ logs/
 *.onnx
 *.tflite
 *.pb
-!yolov8s.pt  # Keep only baseline pretrained model if needed
+!yolov8s.pt  # Keep baseline pretrained model
+!weights/seahunter_best.pt  # Keep SeaHunter final model
 
 # Temporary Files
 temp/
