@@ -2,7 +2,7 @@
 
 Date: 2026-07-30
 Branch: `feature/m2-bytetrack-baseline`
-Status: implementation complete; cloud validation pending
+Status: cloud accepted; external data and target-hardware gates remain open
 
 ## Reconciled evidence
 
@@ -25,6 +25,17 @@ CPU smoke test were already present but not reflected in the ROADMAP checkboxes.
 
 ## Acceptance boundary
 
-Cloud validation must prove the static baseline audit, experiment schema tests, and dry-run plan on a clean checkout.
-Actual six-run training remains data/GPU-gated and cannot be claimed from plan validation. TensorRT and NVIDIA target
-validation belong to M7 and remain external-hardware gates.
+Cloud validation proved the static baseline audit, experiment schema tests, and dry-run plan on a clean checkout.
+The `m0-governance` job collected 5 focused tests and all 5 passed in 0.11 seconds. It also resolved the six-run
+CIoU/NWD matrix without importing or executing the training stack.
+
+- Accepted commit: `df84a2e0b5618596c50b6e3fa9e0ef5eccae7211`
+- Cloud validation: <https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30531764008>
+- Python 3.10/3.12 CI and quality gates:
+  <https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30531763934>
+- Governance artifact: <https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30531764008/artifacts/8754965186>
+
+Actual six-run training remains data/GPU-gated and cannot be claimed from plan validation. Reproduction of published
+metrics requires the original maritime dataset. TensorRT and NVIDIA target validation belong to M7 and remain
+external-hardware gates. The pre-existing local, untracked `work/` directory is user-owned and intentionally excluded
+from repository acceptance and all commits.

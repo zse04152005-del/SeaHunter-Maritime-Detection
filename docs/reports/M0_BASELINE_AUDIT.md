@@ -62,6 +62,7 @@
 
 ## M0 exit work still required
 
-- The configuration-driven multi-variant experiment matrix is implemented; cloud dry-run acceptance is recorded in
-  `docs/reports/M0_GOVERNANCE_PROGRESS.md`.
+- The configuration-driven multi-variant experiment matrix passed its clean-checkout cloud dry-run; acceptance is
+  recorded in `docs/reports/M0_GOVERNANCE_PROGRESS.md`.
+- Reproduce published detection metrics after the original maritime dataset is registered and its split is audited.
 - Produce TensorRT consistency and latency results on the target NVIDIA hardware.
