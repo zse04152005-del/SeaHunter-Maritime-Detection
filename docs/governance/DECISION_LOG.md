@@ -15,5 +15,6 @@
 | 2026-07-30 | D-011 | Permit ReID only after crop quality gates and aggregate only eligible observations into tracklet templates | Tiny, blurred, clipped, dark, saturated, or overlapping maritime crops can cause identity hijacking | Real crop calibration changes gates or a validated ONNX ReID encoder replaces the histogram baseline |
 | 2026-07-30 | D-012 | Keep live recovery causal and restrict hindsight interpolation to a bounded offline-output buffer | Retrospective boxes must not leak into real-time alerts or be mislabeled as observations | A validated fixed-lag smoother replaces linear interpolation with equivalent audit separation |
 | 2026-07-30 | D-013 | Require accepted camera calibration and affine clock/frame alignment before absolute geometry | Coordinate sign, mount, clock, or latency errors can create plausible but false locations | A stronger calibrated sensor-fusion source preserves the same explicit quality/fallback contract |
+| 2026-07-30 | D-014 | Emit absolute sea-plane geolocation only when datum, horizon, range, and combined uncertainty quality pass | Near-horizon and vertical-datum errors amplify into plausible but dangerous range/TTC values | Truth-set evidence supports revised gates or a validated non-planar sea/terrain model |
 
 Architecture decisions with broader context remain under `docs/adr/`.

@@ -63,6 +63,23 @@ def camera_ray_to_enu(ray_camera: Vector3, telemetry: TelemetryPacket, calibrati
     return _normalize(ned_to_enu(ray_ned))
 
 
+def camera_offset_to_enu(telemetry: TelemetryPacket, calibration: CameraCalibration) -> Vector3:
+    """Rotate the gimbal-expressed camera lever arm into ENU."""
+
+    offset_gimbal = calibration.extrinsics.translation_camera_in_gimbal_m
+    gimbal_to_body = rotation_from_roll_pitch_yaw(
+        telemetry.gimbal_roll_deg,
+        telemetry.gimbal_pitch_deg,
+        telemetry.gimbal_yaw_deg,
+    )
+    body_to_ned = rotation_from_roll_pitch_yaw(
+        telemetry.platform_roll_deg,
+        telemetry.platform_pitch_deg,
+        telemetry.platform_yaw_deg,
+    )
+    return ned_to_enu(matvec(body_to_ned, matvec(gimbal_to_body, offset_gimbal)))
+
+
 def geodetic_to_ecef(latitude_deg: float, longitude_deg: float, altitude_m: float) -> Vector3:
     if not all(isfinite(value) for value in (latitude_deg, longitude_deg, altitude_m)):
         raise ValueError("geodetic coordinates must be finite")

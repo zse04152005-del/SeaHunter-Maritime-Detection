@@ -58,6 +58,16 @@ class TrackLossReason(str, Enum):
     EXPIRED = "expired"
 
 
+class MotionTrend(str, Enum):
+    """Quality-bearing relative motion classification."""
+
+    APPROACHING = "approaching"
+    RECEDING = "receding"
+    CROSSING = "crossing"
+    STATIONARY = "stationary"
+    UNKNOWN = "unknown"
+
+
 class EventStatus(str, Enum):
     """Lifecycle states for a risk event."""
 
@@ -298,6 +308,11 @@ class GeoEstimate:
     range_rate_m_s: float | None
     quality: float
     absolute: bool
+    captured_at: datetime | None = None
+    covariance_en_m2: tuple[float, float, float, float] | None = None
+    trend: MotionTrend = MotionTrend.UNKNOWN
+    ttc_seconds: float | None = None
+    degraded_reason: str | None = None
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.quality <= 1.0:
@@ -306,6 +321,32 @@ class GeoEstimate:
             raise ValueError("absolute estimates require coordinates and range")
         if self.range_m is not None and self.range_m < 0:
             raise ValueError("range_m must be non-negative")
+        if self.latitude_deg is not None and not -90.0 <= self.latitude_deg <= 90.0:
+            raise ValueError("latitude_deg must be within [-90, 90]")
+        if self.longitude_deg is not None and not -180.0 <= self.longitude_deg <= 180.0:
+            raise ValueError("longitude_deg must be within [-180, 180]")
+        numeric_optional = (
+            self.latitude_deg,
+            self.longitude_deg,
+            self.range_m,
+            self.bearing_deg,
+            self.range_rate_m_s,
+            self.ttc_seconds,
+        )
+        if any(value is not None and not isfinite(value) for value in numeric_optional):
+            raise ValueError("geo estimate numeric fields must be finite when provided")
+        if self.captured_at is not None:
+            _validate_aware_timestamp(self.captured_at, "captured_at")
+        if self.covariance_en_m2 is not None and not all(isfinite(value) for value in self.covariance_en_m2):
+            raise ValueError("covariance_en_m2 must contain finite values")
+        if self.covariance_en_m2 is not None and (self.covariance_en_m2[0] < 0.0 or self.covariance_en_m2[3] < 0.0):
+            raise ValueError("covariance_en_m2 diagonal must be non-negative")
+        if not isinstance(self.trend, MotionTrend):
+            raise ValueError("trend must be a MotionTrend")
+        if self.ttc_seconds is not None and self.ttc_seconds < 0.0:
+            raise ValueError("ttc_seconds must be non-negative")
+        if self.degraded_reason is not None and not self.degraded_reason.strip():
+            raise ValueError("degraded_reason must not be empty")
 
 
 @dataclass(frozen=True, slots=True)

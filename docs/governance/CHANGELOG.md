@@ -26,6 +26,8 @@
 - Added strict camera calibration, MAVLink aggregation, affine clock synchronization, frame/telemetry latency
   alignment, and explicit camera/FRD/NED/ENU/WGS84 transforms for the M3 foundation.
 - Cloud-accepted the M3 calibration/telemetry foundation with 22 focused tests and a machine-readable audit artifact.
+- Added sea-plane target geolocation, uncertainty propagation, ENU EKF smoothing, relative motion classes, and
+  quality-gated TTC with explicit degradation reasons.
 
 This log summarizes accepted engineering increments. Exact implementation and validation evidence remains in Git
 history and `docs/reports/`.
