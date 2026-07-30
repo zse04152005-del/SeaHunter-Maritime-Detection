@@ -27,6 +27,7 @@ on:
           - m4-events
           - m4-closure
           - m5-data
+          - m6-innovation
           - all
 
 permissions:
@@ -478,4 +479,31 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: m5-data-reports
+          path: reports/
+
+  m6-innovation:
+    if: github.event_name == 'push' || inputs.suite == 'm6-innovation' || inputs.suite == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install innovation validation environment
+        run: uv sync --extra dev
+      - name: Run ROI, temporal, confidence, downsampling, routing, and ablation validation
+        run: |
+          mkdir -p reports
+          uv run pytest \
+            tests/test_innovation_roi.py \
+            tests/test_innovation_temporal.py \
+            tests/test_innovation_routing.py \
+            --junitxml=reports/m6-innovation.xml
+      - name: Upload M6 innovation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m6-innovation-reports
           path: reports/

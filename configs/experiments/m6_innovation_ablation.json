@@ -1,0 +1,22 @@
+{
+  "comparison_contract": {
+    "data_slices": ["all", "tiny", "hard_negative_wave", "normal", "low_light", "fog", "glare", "high_wave"],
+    "metrics": ["precision", "recall", "false_alarms_per_hour", "parameters_millions", "flops_giga", "peak_vram_mb", "tensorrt_latency_ms"],
+    "minimum_seeds": 3,
+    "target_runtime": "TensorRT"
+  },
+  "schema_version": 1,
+  "seeds": [0, 1, 2],
+  "suite_id": "m6-deployable-innovation-ablation",
+  "variants": [
+    {"id": "baseline-full-frame-1024", "modules": []},
+    {"id": "fixed-tiles-1024", "modules": ["fixed_tiles"]},
+    {"id": "selective-roi", "modules": ["selective_roi"]},
+    {"id": "temporal-head", "modules": ["temporal_monitor"]},
+    {"id": "joint-confidence", "modules": ["joint_confidence"]},
+    {"id": "spdconv", "modules": ["spdconv"]},
+    {"id": "joint-antialias", "modules": ["joint_antialias"]},
+    {"id": "weather-threshold-route", "modules": ["weather_route"]},
+    {"id": "combined-p0", "modules": ["selective_roi", "temporal_monitor", "joint_confidence"]}
+  ]
+}
