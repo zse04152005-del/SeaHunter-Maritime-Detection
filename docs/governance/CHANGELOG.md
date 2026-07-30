@@ -22,6 +22,7 @@
 - Cloud-accepted the M2 ReID increment with 19 focused tests while retaining the real-maritime calibration gate.
 - Added finite extrapolation, bounded short-gap interpolation, schema 5 inference-method audit, CLI controls, and a
   focused cloud-validation suite.
+- Cloud-accepted M2 trajectory recovery with 32 focused tests; real maritime occlusion metrics remain gated.
 
 This log summarizes accepted engineering increments. Exact implementation and validation evidence remains in Git
 history and `docs/reports/`.
