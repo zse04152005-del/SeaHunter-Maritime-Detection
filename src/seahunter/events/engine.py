@@ -189,6 +189,43 @@ class DangerZoneEngine:
     def active_events(self) -> tuple[RiskEvent, ...]:
         return tuple(sorted(self._active.values(), key=lambda event: event.event_id))
 
+    def attach_evidence(self, event_id: str, evidence_uri: str) -> RiskEvent:
+        if not evidence_uri.strip():
+            raise ValueError("evidence_uri must not be empty")
+        event = self._events_by_id.get(event_id)
+        if event is None or event.status is EventStatus.CLOSED:
+            raise KeyError("active event_id not found")
+        updated = replace(event, evidence_uri=evidence_uri)
+        self._events_by_id[event_id] = updated
+        for key, active in self._active.items():
+            if active.event_id == event_id:
+                self._active[key] = updated
+                break
+        return updated
+
+    def restore_active_events(self, events: tuple[RiskEvent, ...]) -> None:
+        """Restore persisted non-closed events before processing new observations."""
+
+        zone_ids = {zone.zone_id for zone in self.zones}
+        for event in events:
+            if event.status is EventStatus.CLOSED:
+                raise ValueError("cannot restore a closed event as active")
+            if event.zone_id not in zone_ids:
+                raise ValueError(f"persisted event references unknown zone: {event.zone_id}")
+            try:
+                rule = ZoneRule(event.rule_id)
+            except ValueError as exc:
+                raise ValueError(f"persisted event references unknown rule: {event.rule_id}") from exc
+            key = (event.track_id, event.zone_id, rule)
+            if key in self._active or event.event_id in self._events_by_id:
+                raise ValueError("persisted active event is duplicated")
+            self._active[key] = event
+            self._events_by_id[event.event_id] = event
+            state = self._states.setdefault((event.track_id, event.zone_id), _ZoneTrackState())
+            if rule in {ZoneRule.ENTER, ZoneRule.DWELL, ZoneRule.REVERSE}:
+                state.stable_inside = True
+                state.entered_at = event.opened_at
+
     def _update_hysteresis(self, state: _ZoneTrackState, signed_distance: float, captured_at: datetime) -> None:
         if not state.stable_inside:
             if signed_distance >= self.config.enter_margin_m:

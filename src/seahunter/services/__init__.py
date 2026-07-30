@@ -1,5 +1,7 @@
 """API, event publication, evidence, persistence, preview, and replay services."""
 
+from seahunter.events import EventService, create_event_app
+
 from .parquet import ParquetResultSink
 from .preview import PreviewFrame, PreviewHub, PreviewServer, create_preview_app
 from .replay import ReplayFrameReader, ReplaySummary, percentile, run_replay
@@ -15,6 +17,7 @@ from .visualization import (
 
 __all__ = [
     "AnnotatedVideoSink",
+    "EventService",
     "FrameResult",
     "FrameResultSink",
     "JpegPreviewSink",
@@ -28,6 +31,7 @@ __all__ = [
     "TrackOverlayRenderer",
     "TrackingSink",
     "create_preview_app",
+    "create_event_app",
     "frame_result_to_record",
     "percentile",
     "render_annotated_frame",

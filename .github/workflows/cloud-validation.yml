@@ -25,6 +25,7 @@ on:
           - m3-foundation
           - m3-geolocation
           - m4-events
+          - m4-closure
           - all
 
 permissions:
@@ -416,4 +417,33 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: m4-events-reports
+          path: reports/
+
+  m4-closure:
+    if: github.event_name == 'push' || inputs.suite == 'm4-closure' || inputs.suite == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install event service environment
+        run: uv sync --extra dev --extra edge
+      - name: Run persistence, evidence, API, WebSocket, MQTT, and feedback validation
+        run: |
+          mkdir -p reports
+          uv run pytest \
+            tests/test_event_service.py \
+            tests/test_event_evidence.py \
+            tests/test_event_api.py \
+            tests/test_event_engine.py \
+            tests/test_geofence.py \
+            --junitxml=reports/m4-closure.xml
+      - name: Upload M4 closure reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m4-closure-reports
           path: reports/
