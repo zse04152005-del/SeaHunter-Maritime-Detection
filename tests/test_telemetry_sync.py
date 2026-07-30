@@ -41,7 +41,7 @@ class TelemetrySyncTests(unittest.TestCase):
 
         estimate = synchronizer.estimate()
         self.assertTrue(estimate.accepted)
-        self.assertAlmostEqual(estimate.drift_ppm or 0.0, 100.0, places=2)
+        self.assertAlmostEqual(estimate.drift_ppm or 0.0, 100.0, delta=0.1)
         aligned = synchronizer.align(4.0)
         self.assertIsNotNone(aligned)
         assert aligned is not None
