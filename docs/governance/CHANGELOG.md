@@ -29,6 +29,8 @@
 - Added sea-plane target geolocation, uncertainty propagation, ENU EKF smoothing, relative motion classes, and
   quality-gated TTC with explicit degradation reasons.
 - Cloud-accepted M3 geolocation wiring with 21 focused tests while retaining the real truth-set accuracy gate.
+- Added local/geodetic danger zones, six stateful rules, hysteresis/dwell/cooldown, reliability gating, weighted risk,
+  and acknowledged event lifecycle for M4.
 
 This log summarizes accepted engineering increments. Exact implementation and validation evidence remains in Git
 history and `docs/reports/`.

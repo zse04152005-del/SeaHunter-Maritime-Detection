@@ -1,0 +1,31 @@
+schema_version: 1
+coordinate_convention:
+  geodetic_point_order: [longitude_deg, latitude_deg]
+  local_point_order: [east_m, north_m]
+zones:
+  - zone_id: harbor-restricted-01
+    name: Harbor restricted water
+    coordinate_space: geodetic
+    severity: 0.9
+    polygon:
+      - [120.0000, 30.0000]
+      - [120.0010, 30.0000]
+      - [120.0010, 30.0010]
+      - [120.0000, 30.0010]
+    approach_distance_m: 100.0
+    collision_ttc_seconds: 30.0
+    expected_direction_en: [1.0, 0.0]
+engine:
+  enter_margin_m: 2.0
+  exit_margin_m: 3.0
+  minimum_enter_seconds: 1.0
+  minimum_exit_seconds: 1.0
+  minimum_dwell_seconds: 10.0
+  cooldown_seconds: 30.0
+  minimum_reliability: 0.5
+  ttc_risk_horizon_seconds: 60.0
+  risk_weights:
+    reliability: 0.40
+    ttc: 0.25
+    target_class: 0.15
+    zone: 0.20

@@ -24,6 +24,7 @@ on:
           - m2-recovery
           - m3-foundation
           - m3-geolocation
+          - m4-events
           - all
 
 permissions:
@@ -388,4 +389,31 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: m3-geolocation-reports
+          path: reports/
+
+  m4-events:
+    if: github.event_name == 'push' || inputs.suite == 'm4-events' || inputs.suite == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install event engine environment
+        run: uv sync --extra dev
+      - name: Run zone, hysteresis, rule, risk, and lifecycle validation
+        run: |
+          mkdir -p reports
+          uv run pytest \
+            tests/test_event_engine.py \
+            tests/test_geofence.py \
+            tests/test_schemas.py \
+            --junitxml=reports/m4-events.xml
+      - name: Upload M4 event reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m4-events-reports
           path: reports/
