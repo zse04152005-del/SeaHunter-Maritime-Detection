@@ -2,7 +2,7 @@
 
 Date: 2026-07-30
 Branch: `feature/m2-bytetrack-baseline`
-Status: implementation complete; cloud validation pending
+Status: high/low/motion layers cloud accepted; ReID layer remains next
 
 ## Implemented
 
@@ -21,3 +21,17 @@ Status: implementation complete; cloud validation pending
 Synthetic tests exercise high/low association, a deliberately implausible scale jump with non-zero IoU, Kalman
 distance ordering, audit output, and counter reset. These tests prove deterministic gating behavior only. Threshold
 calibration and ID-switch benefit require the held-out maritime MOT corpus and remain an external data gate.
+
+## Cloud acceptance
+
+- Accepted commit: `70fa011e3e06bf8ecc80cc55d97c52ef97443cbc`.
+- The focused `m2-association` job passed 21 tests in 1.25 seconds.
+- Cloud validation:
+  <https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30535088756>
+- Python 3.10/3.12 CI and quality gates:
+  <https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30535088721>
+- Association artifact:
+  <https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30535088756/artifacts/8756297720>
+
+The composite ROADMAP association item remains open until the separately quality-gated ReID layer is implemented and
+accepted. No maritime ID-switch improvement is claimed from the synthetic motion-gate cases.
