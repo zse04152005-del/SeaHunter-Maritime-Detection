@@ -309,7 +309,7 @@ jobs:
           python-version: "3.12"
           enable-cache: true
       - name: Install trajectory recovery environment
-        run: uv sync --extra dev --extra tracking
+        run: uv sync --extra dev --extra tracking --extra video
       - name: Run interpolation, extrapolation, and audit validation
         run: |
           mkdir -p reports
