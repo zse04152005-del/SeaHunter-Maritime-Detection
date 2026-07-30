@@ -29,6 +29,7 @@ on:
           - m5-data
           - m6-innovation
           - m7-productization
+          - m7-onnx
           - all
 
 permissions:
@@ -537,3 +538,42 @@ jobs:
         with:
           name: m7-productization-reports
           path: reports/
+
+  m7-onnx:
+    if: github.event_name == 'push' || inputs.suite == 'm7-onnx' || inputs.suite == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install ONNX export environment
+        run: uv sync --extra dev --extra export --extra legacy-detector
+      - name: Export static and dynamic-batch ONNX graphs
+        run: |
+          mkdir -p reports/m7-onnx
+          uv run python evaluation/export_onnx_variants.py \
+            --weights weights/seahunter_best.pt \
+            --output-dir reports/m7-onnx \
+            --imgsz 256 \
+            --opset 18
+      - name: Compare PyTorch with static ONNX
+        run: |
+          uv run python evaluation/check_onnx_consistency.py \
+            --weights weights/seahunter_best.pt \
+            --onnx reports/m7-onnx/seahunter-static.onnx \
+            --imgsz 256 > reports/m7-onnx/static-consistency.json
+      - name: Compare PyTorch with dynamic-batch ONNX
+        run: |
+          uv run python evaluation/check_onnx_consistency.py \
+            --weights weights/seahunter_best.pt \
+            --onnx reports/m7-onnx/seahunter-dynamic-batch.onnx \
+            --imgsz 256 > reports/m7-onnx/dynamic-consistency.json
+      - name: Upload M7 ONNX models and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m7-onnx-models-and-reports
+          path: reports/m7-onnx/
