@@ -1,0 +1,8 @@
+stages:
+  audit-example-manifest:
+    cmd: seahunter-data-audit configs/data/m5_manifest.example.json --output reports/m5-data-audit.json --require-gates
+    deps:
+      - configs/data/m5_manifest.example.json
+      - src/seahunter/data
+    outs:
+      - reports/m5-data-audit.json

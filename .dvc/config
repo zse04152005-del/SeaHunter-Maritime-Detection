@@ -1,0 +1,6 @@
+[core]
+    analytics = false
+
+# Configure authenticated storage outside Git, for example:
+# dvc remote add -d maritime s3://<bucket>/seahunter
+# lakeFS users should point the S3-compatible remote at a versioned lakeFS repository.

@@ -1,0 +1,33 @@
+schema_version: 1
+experiment_id: m5-teacher-student-baseline
+data:
+  labeled_manifest: datasets/manifests/labeled.json
+  unlabeled_manifest: datasets/manifests/unlabeled.json
+  test_manifest: datasets/manifests/test-frozen.json
+  group_split_keys: [video_id, voyage_id, date_location]
+teacher:
+  initialization: weights/seahunter_best.pt
+  exponential_moving_average: 0.999
+student:
+  model: configs/models/seahunter_v1.yaml
+  image_size: 1024
+pseudo_labels:
+  default_confidence: 0.70
+  weather_confidence:
+    normal: 0.65
+    low_light: 0.78
+    fog: 0.76
+    glare: 0.80
+    high_wave: 0.82
+  minimum_temporal_iou: 0.30
+  minimum_track_length: 3
+training:
+  seeds: [0, 1, 2]
+  deterministic: true
+  labeled_loss_weight: 1.0
+  unlabeled_loss_weight: 0.5
+tracking:
+  backend: mlflow
+  experiment: seahunter-m5-semisupervised
+  require_git_commit: true
+  require_data_version: true

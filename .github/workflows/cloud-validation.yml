@@ -26,6 +26,7 @@ on:
           - m3-geolocation
           - m4-events
           - m4-closure
+          - m5-data
           - all
 
 permissions:
@@ -446,4 +447,35 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: m4-closure-reports
+          path: reports/
+
+  m5-data:
+    if: github.event_name == 'push' || inputs.suite == 'm5-data' || inputs.suite == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install data-governance environment
+        run: uv sync --extra dev
+      - name: Run leakage, distribution, active-learning, pseudo-label, and calibration validation
+        run: |
+          mkdir -p reports
+          uv run pytest \
+            tests/test_data_audit.py \
+            tests/test_data_learning.py \
+            tests/test_data_calibration.py \
+            --junitxml=reports/m5-data.xml
+          uv run seahunter-data-audit \
+            configs/data/m5_manifest.example.json \
+            --output reports/m5-example-audit.json \
+            --require-gates
+      - name: Upload M5 data reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m5-data-reports
           path: reports/
