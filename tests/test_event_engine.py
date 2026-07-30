@@ -126,7 +126,15 @@ class EventEngineTests(unittest.TestCase):
             ),
         )
         engine.update(observation(0.0, (-20.0, 10.0), velocity=(5.0, 0.0)))
-        approaching = engine.update(observation(1.0, (-10.0, 10.0), velocity=(5.0, 0.0)))
+        approaching = engine.update(
+            observation(
+                1.0,
+                (-10.0, 10.0),
+                velocity=(5.0, 0.0),
+                ttc_seconds=30.0,
+                trend=MotionTrend.APPROACHING,
+            )
+        )
         approach = next(event for event in approaching if event.rule_id == ZoneRule.APPROACH.value)
         self.assertGreater(approach.risk_score, 0.7)
 
