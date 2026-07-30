@@ -17,9 +17,9 @@ validation remain gated by external data and NVIDIA target hardware.
   CPU/memory/NVIDIA device performance summaries.
 - The M2 baseline adds framework-neutral two-stage ByteTrack association, Kalman motion prediction, explicit track
   lifecycle/loss reasons, optional short-occlusion predictions, MOTChallenge export, and auditable track JSONL.
-- A selectable BoT-SORT motion baseline adds foreground-masked sparse optical flow, RANSAC affine camera-motion
-  compensation, plausibility/quality fallback gates, and per-frame GMC audit metadata. Appearance ReID remains off
-  until the separate maritime small-target quality gate is implemented.
+- A selectable BoT-SORT baseline adds foreground-masked sparse optical flow, RANSAC affine camera-motion
+  compensation, telemetry-prior fusion, and optional quality-gated ReID with clear-frame tracklet templates. ReID
+  remains disabled by default until its thresholds and encoder are validated on held-out maritime tracks.
 - The BoT-SORT/GMC implementation passed the Python 3.10/3.12 matrix and focused cloud ablation; its synthetic
   ID-switch improvement is a wiring check, not a real maritime performance claim.
 - The ByteTrack baseline passed the Python 3.10/3.12 CI matrix plus focused M2 tracking, M1 replay, and legacy-weight
@@ -60,7 +60,7 @@ uv pip install -e ".[legacy-detector]"
 
 The authoritative test matrix runs in GitHub Actions on Python 3.10 and 3.12. The manual `cloud-validation`
 workflow provides focused `m0-governance`, `legacy-detector`, `m1-replay`, `m2-tracking`, `m2-evaluation`, `m2-gmc`,
-and `all` suites with JUnit and metric artifacts.
+`m2-motion-prior`, `m2-association`, `m2-reid`, and `all` suites with JUnit and metric artifacts.
 
 ## Detector experiment planning
 
@@ -182,6 +182,25 @@ ablation with otherwise identical BoT-SORT settings; starting parameters are ver
 The included synthetic camera-pan experiment validates wiring and known ID-switch behavior only. It is not evidence
 of real maritime tracking quality; acceptance on real video still requires paired no-GMC/GMC TrackEval results on
 the same leakage-free moving-camera sequences.
+
+Enable the quality-gated ReID layer only for BoT-SORT. Crops that are too small, clipped, overlapping, dark,
+saturated, blurry, malformed, or non-finite bypass the encoder. Low-confidence second-stage matches do not update
+the tracklet template, and tiny targets continue to rely on motion rather than forced appearance matching.
+
+```powershell
+seahunter-video-replay .\samples\flight.mp4 `
+  --output .\outputs\flight.jsonl `
+  --tracker botsort `
+  --reid-enabled `
+  --reid-minimum-short-side 24 `
+  --reid-minimum-similarity 0.75 `
+  --tracks-jsonl .\outputs\flight-tracks.jsonl `
+  --device cpu
+```
+
+The bundled normalized color-histogram encoder validates integration and fallback behavior only. It is not evidence
+of maritime identity discrimination; calibrate the gates and replace it with a validated ONNX encoder before field
+deployment.
 
 When tracking is enabled, annotated video and WebSocket JPEG preview switch from raw detection boxes to stable track
 IDs and bounded trails. Observed states use identity colors and solid boxes; motion-model predictions use orange

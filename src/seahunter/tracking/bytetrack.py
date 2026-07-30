@@ -76,6 +76,9 @@ class _Track:
     appearance_score: float | None
     reid_eligible: bool | None
     reid_bypass_reason: str | None
+    appearance_template: tuple[float, ...] | None
+    appearance_samples: int
+    appearance_quality: float | None
     lost_reason: TrackLossReason | None
 
 
@@ -189,6 +192,13 @@ class ByteTracker:
         second_candidate_set = set(second_candidates)
         remaining_unmatched = [index for index in unmatched_tracks if index not in second_candidate_set]
         remaining_unmatched.extend(unmatched_second)
+        remaining_unmatched, unmatched_high = self._associate_remaining(
+            frame,
+            sorted(set(remaining_unmatched)),
+            high_detections,
+            unmatched_high,
+            observed_indices,
+        )
         for track_index in sorted(set(remaining_unmatched)):
             track = self._tracks[track_index]
             if track.lifecycle is TrackLifecycle.TENTATIVE:
@@ -276,6 +286,9 @@ class ByteTracker:
             appearance_score=None,
             reid_eligible=None,
             reid_bypass_reason=None,
+            appearance_template=None,
+            appearance_samples=0,
+            appearance_quality=None,
             lost_reason=None,
         )
         self._next_track_id += 1
@@ -285,6 +298,19 @@ class ByteTracker:
         """Allow tracker variants to transform predicted states before association."""
 
         del frame, detections
+
+    def _associate_remaining(
+        self,
+        frame: FramePacket,
+        track_indices: Sequence[int],
+        high_detections: Sequence[Detection],
+        unmatched_high: Sequence[int],
+        observed_indices: set[int],
+    ) -> tuple[list[int], list[int]]:
+        """Variant hook for a third association layer such as quality-gated ReID."""
+
+        del frame, high_detections, observed_indices
+        return list(track_indices), list(unmatched_high)
 
     def _update_track(
         self,

@@ -17,6 +17,8 @@
   `FrameResult` telemetry integration seam without making absolute-position or real-data benefit claims.
 - Added pre-assignment Kalman motion gating, high/low/new association audit fields and counters, schema 4 migration
   guidance, and a focused cloud-validation job.
+- Added quality-gated BoT-SORT ReID, clear-frame tracklet template aggregation, explicit tiny-target bypass, a
+  replaceable appearance encoder contract, and focused identity-recovery tests.
 
 This log summarizes accepted engineering increments. Exact implementation and validation evidence remains in Git
 history and `docs/reports/`.

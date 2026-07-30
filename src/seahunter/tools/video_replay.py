@@ -22,6 +22,7 @@ from seahunter.services import (
     run_replay,
 )
 from seahunter.tracking import (
+    AppearanceQualityConfig,
     BoTSORTConfig,
     BoTSORTTracker,
     ByteTrackConfig,
@@ -97,6 +98,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--gmc-minimum-inliers", type=int, default=12)
     parser.add_argument("--gmc-minimum-inlier-ratio", type=float, default=0.35)
     parser.add_argument("--gmc-maximum-translation-ratio", type=float, default=0.35)
+    parser.add_argument("--reid-enabled", action="store_true", help="enable quality-gated BoT-SORT appearance ReID")
+    parser.add_argument("--reid-minimum-similarity", type=float, default=0.75)
+    parser.add_argument("--reid-motion-gate-threshold", type=float, default=50.0)
+    parser.add_argument("--reid-maximum-age", type=int, default=30)
+    parser.add_argument("--reid-template-update-rate", type=float, default=0.25)
+    parser.add_argument("--reid-minimum-short-side", type=float, default=24.0)
+    parser.add_argument("--reid-minimum-area", type=float, default=768.0)
+    parser.add_argument("--reid-minimum-visible-fraction", type=float, default=0.9)
+    parser.add_argument("--reid-maximum-overlap-fraction", type=float, default=0.6)
+    parser.add_argument("--reid-minimum-brightness", type=float, default=20.0)
+    parser.add_argument("--reid-maximum-brightness", type=float, default=235.0)
+    parser.add_argument("--reid-minimum-sharpness", type=float, default=10.0)
     parser.add_argument(
         "--mot-include-inferred",
         action="store_true",
@@ -158,6 +171,10 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--mot-include-inferred requires --mot-output")
     if args.track_trail_length < 0:
         raise SystemExit("--track-trail-length must be non-negative")
+    if args.reid_enabled and args.tracker != "botsort":
+        raise SystemExit("--reid-enabled requires --tracker botsort")
+    if args.reid_enabled and args.reid_maximum_age > args.track_max_lost:
+        raise SystemExit("--reid-maximum-age cannot exceed --track-max-lost")
     monitor = RuntimeResourceMonitor()
     sinks: list[FrameResultSink] = []
     if args.parquet is not None:
@@ -235,6 +252,7 @@ def main(argv: list[str] | None = None) -> int:
             tracking_summary["association"] = tracking_sink.tracker.association_summary()
         if isinstance(tracking_sink.tracker, BoTSORTTracker):
             tracking_summary["global_motion"] = tracking_sink.tracker.motion_summary()
+            tracking_summary["appearance"] = tracking_sink.tracker.appearance_summary()
         output_summary["tracking"] = tracking_summary
     print(json.dumps(output_summary, ensure_ascii=False, sort_keys=True, indent=2))
     return 0
@@ -270,6 +288,20 @@ def _build_tracker(args: argparse.Namespace) -> MultiObjectTracker:
                 **common,
                 gmc_enabled=not args.gmc_disabled,
                 global_motion=motion_config,
+                reid_enabled=args.reid_enabled,
+                appearance_quality=AppearanceQualityConfig(
+                    minimum_short_side_px=args.reid_minimum_short_side,
+                    minimum_area_px=args.reid_minimum_area,
+                    minimum_visible_fraction=args.reid_minimum_visible_fraction,
+                    maximum_overlap_fraction=args.reid_maximum_overlap_fraction,
+                    minimum_brightness=args.reid_minimum_brightness,
+                    maximum_brightness=args.reid_maximum_brightness,
+                    minimum_sharpness=args.reid_minimum_sharpness,
+                ),
+                minimum_appearance_similarity=args.reid_minimum_similarity,
+                reid_motion_gate_threshold=args.reid_motion_gate_threshold,
+                maximum_reid_age_frames=args.reid_maximum_age,
+                template_update_rate=args.reid_template_update_rate,
             )
         )
     raise ValueError(f"unsupported tracker: {args.tracker}")

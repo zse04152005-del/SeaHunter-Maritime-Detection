@@ -20,6 +20,7 @@ on:
           - m2-gmc
           - m2-motion-prior
           - m2-association
+          - m2-reid
           - all
 
 permissions:
@@ -265,4 +266,33 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: m2-association-reports
+          path: reports/
+
+  m2-reid:
+    if: github.event_name == 'push' || inputs.suite == 'm2-reid' || inputs.suite == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install appearance tracking environment
+        run: uv sync --extra dev --extra tracking
+      - name: Run ReID quality and tracklet-template validation
+        run: |
+          mkdir -p reports
+          uv run pytest \
+            tests/test_reid_quality.py \
+            tests/test_botsort.py \
+            tests/test_motion_association.py \
+            tests/test_tracking_outputs.py \
+            tests/test_edge_cli.py \
+            --junitxml=reports/m2-reid.xml
+      - name: Upload ReID reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2-reid-reports
           path: reports/

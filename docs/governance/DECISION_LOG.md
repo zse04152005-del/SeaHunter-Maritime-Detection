@@ -12,5 +12,6 @@
 | 2026-07-30 | D-008 | Separate decoder build capability, actual source selection, and NVDEC target proof | Generic OpenCV hardware flags can silently fall back and cannot independently prove NVDEC | A dedicated runtime exposes stronger vendor-specific decoder evidence |
 | 2026-07-30 | D-009 | Use aligned IMU/gimbal rotation only as a gated GMC prior | Telemetry can rescue weak visual texture but cannot replace visual evidence or calibrated translation geometry | M3 calibration/time-sync results or real-sequence disagreement analysis |
 | 2026-07-30 | D-010 | Gate high/low ByteTrack association with Kalman Mahalanobis distance before Hungarian assignment | IoU alone can match physically implausible center/scale jumps, and post-assignment rejection can hide valid alternatives | Held-out maritime MOT calibration supports a different confidence level or measurement model |
+| 2026-07-30 | D-011 | Permit ReID only after crop quality gates and aggregate only eligible observations into tracklet templates | Tiny, blurred, clipped, dark, saturated, or overlapping maritime crops can cause identity hijacking | Real crop calibration changes gates or a validated ONNX ReID encoder replaces the histogram baseline |
 
 Architecture decisions with broader context remain under `docs/adr/`.
