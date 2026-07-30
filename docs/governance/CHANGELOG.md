@@ -28,6 +28,7 @@
 - Cloud-accepted the M3 calibration/telemetry foundation with 22 focused tests and a machine-readable audit artifact.
 - Added sea-plane target geolocation, uncertainty propagation, ENU EKF smoothing, relative motion classes, and
   quality-gated TTC with explicit degradation reasons.
+- Cloud-accepted M3 geolocation wiring with 21 focused tests while retaining the real truth-set accuracy gate.
 
 This log summarizes accepted engineering increments. Exact implementation and validation evidence remains in Git
 history and `docs/reports/`.

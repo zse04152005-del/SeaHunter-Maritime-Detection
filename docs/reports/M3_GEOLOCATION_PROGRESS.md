@@ -2,7 +2,7 @@
 
 Date: 2026-07-30
 Branch: `feature/m2-bytetrack-baseline`
-Status: implementation complete; cloud validation pending
+Status: cloud accepted; real truth-set accuracy gate remains open
 
 ## Implemented
 
@@ -19,3 +19,19 @@ The sea is locally approximated as horizontal. AMSL, relative-home, and WGS84 el
 Near-horizon rays and low-quality solutions do not emit absolute coordinates. Linear synthetic geometry validates
 signs, gates, covariance plumbing, filtering, and TTC math only; accuracy claims require truth from the actual
 aircraft, camera, vertical datum, sea state, and mission envelope.
+
+## Cloud acceptance
+
+- Accepted commit: `7fef086c8a113dc7ac022b43ef2077deb12f94d7`.
+- The focused `m3-geolocation` job passed 21 tests in 0.28 seconds.
+- Cloud validation:
+  <https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30538754473>
+- Python 3.10/3.12 CI and quality gates:
+  <https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30538754478>
+- M3 geolocation artifact:
+  <https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30538754473/artifacts/8757776017>
+
+## Remaining external gate
+
+- Build the versioned RTK/AIS/rangefinder/known-marker truth set and freeze distance/attitude/sea-state MAE and
+  relative-error requirements before claiming operational range, geolocation, trend, or TTC accuracy.
