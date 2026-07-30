@@ -111,6 +111,8 @@ class ByteTracker:
             track.time_since_update += delta_frames
             track.association_score = None
 
+        self._after_prediction(frame, detections)
+
         high_detections = [
             detection for detection in detections if detection.confidence >= self.config.high_confidence_threshold
         ]
@@ -216,6 +218,11 @@ class ByteTracker:
         )
         self._next_track_id += 1
         return track
+
+    def _after_prediction(self, frame: FramePacket, detections: Sequence[Detection]) -> None:
+        """Allow tracker variants to transform predicted states before association."""
+
+        del frame, detections
 
     def _update_track(self, track: _Track, detection: Detection, score: float) -> None:
         track.mean, track.covariance = self._kalman.update(

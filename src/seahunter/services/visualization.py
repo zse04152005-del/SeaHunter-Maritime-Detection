@@ -358,6 +358,16 @@ def _track_state_to_preview_record(state: TrackState) -> dict[str, object]:
         "age_frames": state.age_frames,
         "time_since_update": state.time_since_update,
         "lost_reason": None if state.lost_reason is None else state.lost_reason.value,
+        "global_motion": (
+            None
+            if state.global_motion_affine is None
+            else {
+                "affine_2x3": [round(value, 6) for value in state.global_motion_affine],
+                "quality": round(state.global_motion_quality or 0.0, 6),
+                "applied": state.global_motion_applied,
+                "fallback_reason": state.global_motion_fallback_reason,
+            }
+        ),
     }
 
 

@@ -44,6 +44,30 @@ class EdgeCliTests(unittest.TestCase):
         self.assertTrue(args.track_emit_lost)
         self.assertTrue(args.mot_include_inferred)
 
+    def test_video_replay_parser_accepts_botsort_gmc_controls(self) -> None:
+        args = build_parser().parse_args(
+            [
+                "flight.mp4",
+                "--output",
+                "flight.jsonl",
+                "--tracker",
+                "botsort",
+                "--gmc-downscale",
+                "1",
+                "--gmc-minimum-inliers",
+                "20",
+                "--gmc-minimum-inlier-ratio",
+                "0.5",
+                "--gmc-maximum-translation-ratio",
+                "0.2",
+            ]
+        )
+        self.assertEqual(args.tracker, "botsort")
+        self.assertEqual(args.gmc_downscale, 1)
+        self.assertEqual(args.gmc_minimum_inliers, 20)
+        self.assertEqual(args.gmc_minimum_inlier_ratio, 0.5)
+        self.assertEqual(args.gmc_maximum_translation_ratio, 0.2)
+
     def test_edge_service_injects_always_on_defaults(self) -> None:
         with patch("seahunter.tools.edge_service.replay_main", return_value=0) as replay:
             self.assertEqual(main(["0", "--output", "live.jsonl"]), 0)

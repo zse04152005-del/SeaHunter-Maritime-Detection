@@ -79,6 +79,29 @@ class KalmanXYWH:
         updated_covariance = (identity - kalman_gain @ self._measurement_matrix) @ covariance
         return updated_mean, updated_covariance
 
+    def apply_affine(self, mean: Any, covariance: Any, affine_2x3: tuple[float, ...]) -> tuple[Any, Any]:
+        """Warp one predicted state from the previous camera view into the current view."""
+
+        if len(affine_2x3) != 6:
+            raise ValueError("affine_2x3 must contain six coefficients")
+        affine = self._np.asarray(affine_2x3, dtype=float).reshape(2, 3)
+        if not bool(self._np.isfinite(affine).all()):
+            raise ValueError("affine_2x3 coefficients must be finite")
+
+        linear = affine[:, :2]
+        size_linear = self._np.abs(linear)
+        state_transform = self._np.zeros((8, 8), dtype=float)
+        state_transform[0:2, 0:2] = linear
+        state_transform[2:4, 2:4] = size_linear
+        state_transform[4:6, 4:6] = linear
+        state_transform[6:8, 6:8] = size_linear
+
+        transformed_mean = state_transform @ mean
+        transformed_mean[0:2] += affine[:, 2]
+        transformed_mean[2:4] = self._np.maximum(transformed_mean[2:4], 1.0)
+        transformed_covariance = state_transform @ covariance @ state_transform.T
+        return transformed_mean, transformed_covariance
+
     @staticmethod
     def to_xyxy(mean: Any) -> tuple[float, float, float, float]:
         cx, cy, width, height = (float(value) for value in mean[:4])

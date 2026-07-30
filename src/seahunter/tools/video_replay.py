@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from typing import Any
 
 from seahunter.runtime import RuntimeResourceMonitor, UltralyticsDetector
 from seahunter.schemas import SourceKind
@@ -20,7 +21,16 @@ from seahunter.services import (
     create_preview_app,
     run_replay,
 )
-from seahunter.tracking import ByteTrackConfig, ByteTracker, MOTChallengeWriter, TrackJsonlWriter
+from seahunter.tracking import (
+    BoTSORTConfig,
+    BoTSORTTracker,
+    ByteTrackConfig,
+    ByteTracker,
+    MOTChallengeWriter,
+    MultiObjectTracker,
+    SparseOpticalFlowConfig,
+    TrackJsonlWriter,
+)
 from seahunter.video import OpenCVFrameReader, OpenCVReaderConfig, parse_video_source
 
 
@@ -60,7 +70,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--preview-host", default="127.0.0.1")
     parser.add_argument("--preview-port", type=int, default=8000)
     parser.add_argument("--preview-quality", type=int, default=80)
-    parser.add_argument("--tracker", choices=("none", "bytetrack"), default="none")
+    parser.add_argument("--tracker", choices=("none", "bytetrack", "botsort"), default="none")
     parser.add_argument("--tracks-jsonl", type=Path, help="auditable per-frame track-state JSONL")
     parser.add_argument("--mot-output", type=Path, help="MOTChallenge ten-column tracking output")
     parser.add_argument("--track-high-threshold", type=float, default=0.6)
@@ -75,6 +85,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--track-class-agnostic", action="store_true")
     parser.add_argument("--track-emit-lost", action="store_true")
     parser.add_argument("--track-trail-length", type=int, default=30)
+    parser.add_argument("--gmc-disabled", action="store_true", help="disable BoT-SORT visual GMC for ablation")
+    parser.add_argument("--gmc-downscale", type=int, default=2)
+    parser.add_argument("--gmc-minimum-inliers", type=int, default=12)
+    parser.add_argument("--gmc-minimum-inlier-ratio", type=float, default=0.35)
+    parser.add_argument("--gmc-maximum-translation-ratio", type=float, default=0.35)
     parser.add_argument(
         "--mot-include-inferred",
         action="store_true",
@@ -131,7 +146,7 @@ def main(argv: list[str] | None = None) -> int:
         },
     )
     if args.tracker == "none" and (args.tracks_jsonl is not None or args.mot_output is not None):
-        raise SystemExit("tracking outputs require --tracker bytetrack")
+        raise SystemExit("tracking outputs require --tracker bytetrack or botsort")
     if args.mot_include_inferred and args.mot_output is None:
         raise SystemExit("--mot-include-inferred requires --mot-output")
     if args.track_trail_length < 0:
@@ -141,7 +156,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.parquet is not None:
         sinks.append(ParquetResultSink(args.parquet))
     tracking_sink: TrackingSink | None = None
-    if args.tracker == "bytetrack":
+    if args.tracker != "none":
         track_outputs: list[TrackStateSink] = []
         if args.tracks_jsonl is not None:
             track_outputs.append(TrackJsonlWriter(args.tracks_jsonl))
@@ -153,21 +168,7 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
         tracking_sink = TrackingSink(
-            ByteTracker(
-                ByteTrackConfig(
-                    high_confidence_threshold=args.track_high_threshold,
-                    low_confidence_threshold=args.track_low_threshold,
-                    new_track_threshold=args.track_new_threshold,
-                    first_match_iou_threshold=args.track_first_iou,
-                    second_match_iou_threshold=args.track_second_iou,
-                    max_lost_frames=args.track_max_lost,
-                    minimum_confirmed_hits=args.track_minimum_hits,
-                    frame_rate=args.track_frame_rate,
-                    inferred_confidence_decay=args.track_inferred_confidence_decay,
-                    class_aware=not args.track_class_agnostic,
-                    emit_lost_predictions=args.track_emit_lost,
-                )
-            ),
+            _build_tracker(args),
             sinks=track_outputs,
         )
         sinks.append(tracking_sink)
@@ -218,13 +219,49 @@ def main(argv: list[str] | None = None) -> int:
             server.stop()
     output_summary = summary.to_dict()
     if tracking_sink is not None:
-        output_summary["tracking"] = {
+        tracking_summary: dict[str, object] = {
             "tracker_id": tracking_sink.tracker.tracker_id,
             "frames_processed": tracking_sink.frames_processed,
             "states_emitted": tracking_sink.states_emitted,
         }
+        if isinstance(tracking_sink.tracker, BoTSORTTracker):
+            tracking_summary["global_motion"] = tracking_sink.tracker.motion_summary()
+        output_summary["tracking"] = tracking_summary
     print(json.dumps(output_summary, ensure_ascii=False, sort_keys=True, indent=2))
     return 0
+
+
+def _build_tracker(args: argparse.Namespace) -> MultiObjectTracker:
+    common: dict[str, Any] = {
+        "high_confidence_threshold": args.track_high_threshold,
+        "low_confidence_threshold": args.track_low_threshold,
+        "new_track_threshold": args.track_new_threshold,
+        "first_match_iou_threshold": args.track_first_iou,
+        "second_match_iou_threshold": args.track_second_iou,
+        "max_lost_frames": args.track_max_lost,
+        "minimum_confirmed_hits": args.track_minimum_hits,
+        "frame_rate": args.track_frame_rate,
+        "inferred_confidence_decay": args.track_inferred_confidence_decay,
+        "class_aware": not args.track_class_agnostic,
+        "emit_lost_predictions": args.track_emit_lost,
+    }
+    if args.tracker == "bytetrack":
+        return ByteTracker(ByteTrackConfig(**common))
+    if args.tracker == "botsort":
+        motion_config = SparseOpticalFlowConfig(
+            downscale_factor=args.gmc_downscale,
+            minimum_inliers=args.gmc_minimum_inliers,
+            minimum_inlier_ratio=args.gmc_minimum_inlier_ratio,
+            maximum_translation_ratio=args.gmc_maximum_translation_ratio,
+        )
+        return BoTSORTTracker(
+            BoTSORTConfig(
+                **common,
+                gmc_enabled=not args.gmc_disabled,
+                global_motion=motion_config,
+            )
+        )
+    raise ValueError(f"unsupported tracker: {args.tracker}")
 
 
 def _validate_output_paths(

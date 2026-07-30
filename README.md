@@ -17,6 +17,9 @@ validation remain gated by external data and NVIDIA target hardware.
   CPU/memory/NVIDIA device performance summaries.
 - The M2 baseline adds framework-neutral two-stage ByteTrack association, Kalman motion prediction, explicit track
   lifecycle/loss reasons, optional short-occlusion predictions, MOTChallenge export, and auditable track JSONL.
+- A selectable BoT-SORT motion baseline adds foreground-masked sparse optical flow, RANSAC affine camera-motion
+  compensation, plausibility/quality fallback gates, and per-frame GMC audit metadata. Appearance ReID remains off
+  until the separate maritime small-target quality gate is implemented.
 - The ByteTrack baseline passed the Python 3.10/3.12 CI matrix plus focused M2 tracking, M1 replay, and legacy-weight
   CPU cloud validation suites.
 - The complete execution order and acceptance gates are defined in [ROADMAP.md](ROADMAP.md).
@@ -54,8 +57,8 @@ uv pip install -e ".[legacy-detector]"
 ```
 
 The authoritative test matrix runs in GitHub Actions on Python 3.10 and 3.12. The manual `cloud-validation`
-workflow provides focused `legacy-detector`, `m1-replay`, `m2-tracking`, `m2-evaluation`, and `all` suites with
-JUnit and metric artifacts.
+workflow provides focused `legacy-detector`, `m1-replay`, `m2-tracking`, `m2-evaluation`, `m2-gmc`, and `all` suites
+with JUnit and metric artifacts.
 
 ## Video replay
 
@@ -100,7 +103,7 @@ Use `--max-reconnect-attempts -1` for an always-on service. The default finite r
 Hardware decoding is requested through the selected OpenCV backend when available, but NVDEC must still be verified
 on the target NVIDIA device before it is treated as an accepted deployment capability.
 
-## ByteTrack baseline
+## ByteTrack and BoT-SORT baselines
 
 Enable the M2 tracker during replay and write both evaluation and audit outputs:
 
@@ -120,6 +123,30 @@ MOT output contains observed states by default. Add `--mot-include-inferred` onl
 intended to consume motion-model predictions. The audit JSONL always retains `observed`/`inferred`, lifecycle,
 association score, covariance, age, time-since-update, tracker configuration ID, and loss reason. Starting parameters
 are recorded in `configs/tracking/bytetrack.maritime.yaml` and must be calibrated on video-level maritime data.
+
+Use the BoT-SORT motion branch for a moving UAV camera:
+
+```powershell
+seahunter-video-replay .\samples\flight.mp4 `
+  --output .\outputs\flight.jsonl `
+  --tracker botsort `
+  --tracks-jsonl .\outputs\flight-tracks.jsonl `
+  --mot-output .\outputs\flight-mot.txt `
+  --gmc-downscale 2 `
+  --gmc-minimum-inliers 12 `
+  --device cpu
+```
+
+The visual GMC estimator masks detector boxes, tracks background corners with pyramidal LK flow, fits a partial
+affine transform with RANSAC, and rejects low-support or implausible translation/scale/rotation estimates. Rejected
+frames use an identity fallback instead of moving tracks with an unreliable warp. Track audit JSONL schema v2
+records the affine coefficients, quality, applied flag, and fallback reason. `--gmc-disabled` provides a paired
+ablation with otherwise identical BoT-SORT settings; starting parameters are versioned in
+`configs/tracking/botsort.maritime.yaml`.
+
+The included synthetic camera-pan experiment validates wiring and known ID-switch behavior only. It is not evidence
+of real maritime tracking quality; acceptance on real video still requires paired no-GMC/GMC TrackEval results on
+the same leakage-free moving-camera sequences.
 
 When tracking is enabled, annotated video and WebSocket JPEG preview switch from raw detection boxes to stable track
 IDs and bounded trails. Observed states use identity colors and solid boxes; motion-model predictions use orange

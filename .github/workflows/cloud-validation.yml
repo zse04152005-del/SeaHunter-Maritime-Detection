@@ -16,6 +16,7 @@ on:
           - m1-replay
           - m2-tracking
           - m2-evaluation
+          - m2-gmc
           - all
 
 permissions:
@@ -140,4 +141,37 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: m2-evaluation-reports
+          path: reports/
+
+  m2-gmc:
+    if: github.event_name == 'push' || inputs.suite == 'm2-gmc' || inputs.suite == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install BoT-SORT GMC environment
+        run: uv sync --extra dev --extra video --extra tracking
+      - name: Run BoT-SORT and GMC validation
+        run: |
+          mkdir -p reports
+          uv run pytest \
+            tests/test_global_motion.py \
+            tests/test_botsort.py \
+            tests/test_gmc_ablation.py \
+            tests/test_edge_cli.py \
+            tests/test_tracking_outputs.py \
+            --junitxml=reports/m2-gmc.xml
+      - name: Generate synthetic camera-pan ablation
+        run: |
+          uv run python evaluation/evaluate_gmc_ablation.py \
+            --output reports/synthetic-camera-pan-gmc-ablation.json
+      - name: Upload BoT-SORT GMC reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2-gmc-reports
           path: reports/

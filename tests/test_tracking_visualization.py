@@ -118,6 +118,7 @@ class TrackingVisualizationTests(unittest.TestCase):
         assert isinstance(tracks, list)
         self.assertEqual(tracks[0]["track_id"], 7)
         self.assertEqual(tracks[0]["observation"], "observed")
+        self.assertIsNone(tracks[0]["global_motion"])
         sink.close()
 
     def test_tracking_sink_snapshot_drives_same_frame_preview(self) -> None:

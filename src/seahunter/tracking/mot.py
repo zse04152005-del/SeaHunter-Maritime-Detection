@@ -76,7 +76,7 @@ class TrackJsonlWriter:
         stream = self._ensure_stream()
         for state in sorted(states, key=lambda item: (item.frame_id, item.track_id)):
             record = {
-                "schema_version": 1,
+                "schema_version": 2,
                 "tracker_id": state.tracker_id,
                 "track_id": state.track_id,
                 "frame_id": state.frame_id,
@@ -94,6 +94,16 @@ class TrackJsonlWriter:
                 "time_since_update": state.time_since_update,
                 "association_score": (None if state.association_score is None else round(state.association_score, 6)),
                 "lost_reason": None if state.lost_reason is None else state.lost_reason.value,
+                "global_motion": (
+                    None
+                    if state.global_motion_affine is None
+                    else {
+                        "affine_2x3": [round(value, 6) for value in state.global_motion_affine],
+                        "quality": round(state.global_motion_quality or 0.0, 6),
+                        "applied": state.global_motion_applied,
+                        "fallback_reason": state.global_motion_fallback_reason,
+                    }
+                ),
             }
             stream.write(json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
             stream.write("\n")

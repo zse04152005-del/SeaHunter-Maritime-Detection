@@ -1,0 +1,43 @@
+schema_version: 1
+tracker_type: botsort
+implementation: seahunter.tracking.BoTSORTTracker
+
+# Motion-only BoT-SORT baseline. ReID remains disabled until maritime target
+# quality gating and clear-frame tracklet templates are implemented.
+high_confidence_threshold: 0.60
+low_confidence_threshold: 0.10
+new_track_threshold: 0.70
+first_match_iou_threshold: 0.30
+second_match_iou_threshold: 0.20
+max_lost_frames: 30
+minimum_confirmed_hits: 1
+frame_rate: 30.0
+inferred_confidence_decay: 0.90
+class_aware: true
+emit_lost_predictions: false
+reid_enabled: false
+
+global_motion:
+  enabled: true
+  method: sparse_optical_flow_affine
+  downscale_factor: 2
+  max_corners: 500
+  quality_level: 0.01
+  minimum_feature_distance: 8.0
+  max_optical_flow_error: 30.0
+  ransac_reprojection_threshold: 3.0
+  minimum_inliers: 12
+  minimum_inlier_ratio: 0.35
+  exclusion_padding_px: 6.0
+  maximum_translation_ratio: 0.35
+  minimum_scale: 0.80
+  maximum_scale: 1.20
+  maximum_rotation_degrees: 20.0
+
+outputs:
+  mot_include_inferred: false
+  audit_jsonl_schema_version: 2
+  track_trail_length: 30
+
+# Starting values only. Accept a real-data benefit only after paired no-GMC/GMC
+# evaluation on the same leakage-free moving-camera maritime sequences.

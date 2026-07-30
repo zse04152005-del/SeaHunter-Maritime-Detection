@@ -101,6 +101,19 @@ class SchemaTests(unittest.TestCase):
                 observation=ObservationKind.INFERRED,
             )
 
+    def test_applied_global_motion_requires_coefficients_and_quality(self) -> None:
+        with self.assertRaises(ValueError):
+            TrackState(
+                track_id=1,
+                frame_id=1,
+                captured_at=datetime.now(timezone.utc),
+                bbox_xyxy=(0.0, 0.0, 10.0, 10.0),
+                class_id=0,
+                confidence=0.8,
+                observation=ObservationKind.OBSERVED,
+                global_motion_applied=True,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

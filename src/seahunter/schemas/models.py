@@ -164,6 +164,10 @@ class TrackState:
     time_since_update: int = 0
     association_score: float | None = None
     lost_reason: TrackLossReason | None = None
+    global_motion_affine: tuple[float, float, float, float, float, float] | None = None
+    global_motion_quality: float | None = None
+    global_motion_applied: bool = False
+    global_motion_fallback_reason: str | None = None
 
     def __post_init__(self) -> None:
         if self.track_id < 0 or self.frame_id < 0:
@@ -189,6 +193,18 @@ class TrackState:
             raise ValueError("observed track states must not have a lost_reason")
         if self.observation is ObservationKind.INFERRED and self.lost_reason is None:
             raise ValueError("inferred track states must have a lost_reason")
+        if self.global_motion_affine is None:
+            if self.global_motion_quality is not None or self.global_motion_applied:
+                raise ValueError("global-motion quality/applied state requires affine coefficients")
+        else:
+            if len(self.global_motion_affine) != 6 or not all(isfinite(value) for value in self.global_motion_affine):
+                raise ValueError("global_motion_affine must contain six finite coefficients")
+            if self.global_motion_quality is None or not 0.0 <= self.global_motion_quality <= 1.0:
+                raise ValueError("global_motion_quality must be within [0, 1] when an affine is provided")
+        if self.global_motion_applied and self.global_motion_fallback_reason is not None:
+            raise ValueError("applied global motion cannot have a fallback reason")
+        if self.global_motion_fallback_reason is not None and not self.global_motion_fallback_reason.strip():
+            raise ValueError("global_motion_fallback_reason must not be empty")
         _validate_aware_timestamp(self.captured_at, "captured_at")
 
 
