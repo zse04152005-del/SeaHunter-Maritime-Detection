@@ -97,6 +97,7 @@ jobs:
           uv run pytest \
             tests/test_bytetrack.py \
             tests/test_tracking_outputs.py \
+            tests/test_tracking_visualization.py \
             tests/test_schemas.py \
             tests/test_edge_cli.py \
             --junitxml=reports/m2-tracking.xml

@@ -40,6 +40,11 @@ class TrackingSink:
         self.frames_processed += 1
         self.states_emitted += len(states)
 
+    def snapshot(self) -> tuple[TrackState, ...]:
+        """Return the current frame's immutable track-state snapshot."""
+
+        return self.latest_states
+
     def close(self) -> None:
         if self._closed:
             return

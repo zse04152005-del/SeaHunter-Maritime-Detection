@@ -37,7 +37,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output", type=Path, required=True, help="deterministic JSONL metadata output")
     parser.add_argument("--summary", type=Path, help="performance summary JSON (defaults beside output)")
     parser.add_argument("--parquet", type=Path, help="flattened Parquet output for batch evaluation")
-    parser.add_argument("--annotated-video", type=Path, help="optional video with boxes and runtime overlay")
+    parser.add_argument("--annotated-video", type=Path, help="optional video with detection or track overlays")
     parser.add_argument("--output-fps", type=float, default=25.0, help="annotated video frame rate")
     parser.add_argument("--video-codec", help="four-character OpenCV codec, e.g. mp4v or MJPG")
     parser.add_argument("--weights", type=Path, default=root / "weights/seahunter_best.pt")
@@ -74,6 +74,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--track-inferred-confidence-decay", type=float, default=0.9)
     parser.add_argument("--track-class-agnostic", action="store_true")
     parser.add_argument("--track-emit-lost", action="store_true")
+    parser.add_argument("--track-trail-length", type=int, default=30)
     parser.add_argument(
         "--mot-include-inferred",
         action="store_true",
@@ -133,18 +134,12 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("tracking outputs require --tracker bytetrack")
     if args.mot_include_inferred and args.mot_output is None:
         raise SystemExit("--mot-include-inferred requires --mot-output")
+    if args.track_trail_length < 0:
+        raise SystemExit("--track-trail-length must be non-negative")
     monitor = RuntimeResourceMonitor()
     sinks: list[FrameResultSink] = []
     if args.parquet is not None:
         sinks.append(ParquetResultSink(args.parquet))
-    if args.annotated_video is not None:
-        sinks.append(
-            AnnotatedVideoSink(
-                args.annotated_video,
-                fps=args.output_fps,
-                codec=args.video_codec,
-            )
-        )
     tracking_sink: TrackingSink | None = None
     if args.tracker == "bytetrack":
         track_outputs: list[TrackStateSink] = []
@@ -177,10 +172,29 @@ def main(argv: list[str] | None = None) -> int:
         )
         sinks.append(tracking_sink)
 
+    track_state_provider = None if tracking_sink is None else tracking_sink.snapshot
+    if args.annotated_video is not None:
+        sinks.append(
+            AnnotatedVideoSink(
+                args.annotated_video,
+                fps=args.output_fps,
+                codec=args.video_codec,
+                track_state_provider=track_state_provider,
+                track_trail_length=args.track_trail_length,
+            )
+        )
+
     server: PreviewServer | None = None
     if args.preview:
         hub = PreviewHub()
-        sinks.append(JpegPreviewSink(hub, quality=args.preview_quality))
+        sinks.append(
+            JpegPreviewSink(
+                hub,
+                quality=args.preview_quality,
+                track_state_provider=track_state_provider,
+                track_trail_length=args.track_trail_length,
+            )
+        )
         app = create_preview_app(hub, metrics_provider=lambda: monitor.summary().to_dict())
         server = PreviewServer(app, host=args.preview_host, port=args.preview_port)
         server.start()

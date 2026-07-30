@@ -18,6 +18,7 @@ emit_lost_predictions: false
 outputs:
   mot_include_inferred: false
   audit_jsonl: true
+  track_trail_length: 30
 
 # Starting values only: calibrate by target size, weather, camera motion, and source FPS
 # on a leakage-free maritime MOT validation split before accepting the baseline.

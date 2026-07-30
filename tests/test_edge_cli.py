@@ -28,6 +28,8 @@ class EdgeCliTests(unittest.TestCase):
                 "tracks.jsonl",
                 "--track-frame-rate",
                 "25",
+                "--track-trail-length",
+                "24",
                 "--track-emit-lost",
                 "--mot-output",
                 "tracks.txt",
@@ -38,6 +40,7 @@ class EdgeCliTests(unittest.TestCase):
         self.assertEqual(str(args.parquet), "flight.parquet")
         self.assertEqual(args.tracker, "bytetrack")
         self.assertEqual(args.track_frame_rate, 25.0)
+        self.assertEqual(args.track_trail_length, 24)
         self.assertTrue(args.track_emit_lost)
         self.assertTrue(args.mot_include_inferred)
 

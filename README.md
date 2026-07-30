@@ -111,6 +111,7 @@ seahunter-video-replay .\samples\flight.mp4 `
   --mot-output .\outputs\flight-mot.txt `
   --track-frame-rate 25 `
   --track-emit-lost `
+  --track-trail-length 30 `
   --device cpu
 ```
 
@@ -118,6 +119,11 @@ MOT output contains observed states by default. Add `--mot-include-inferred` onl
 intended to consume motion-model predictions. The audit JSONL always retains `observed`/`inferred`, lifecycle,
 association score, covariance, age, time-since-update, tracker configuration ID, and loss reason. Starting parameters
 are recorded in `configs/tracking/bytetrack.maritime.yaml` and must be calibrated on video-level maritime data.
+
+When tracking is enabled, annotated video and WebSocket JPEG preview switch from raw detection boxes to stable track
+IDs and bounded trails. Observed states use identity colors and solid boxes; motion-model predictions use orange
+dashed boxes and trail segments. Preview metadata includes the same lifecycle and observation fields for operator UI
+and audit consumers.
 
 ## Important licensing note
 
