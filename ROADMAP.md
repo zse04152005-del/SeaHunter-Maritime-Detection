@@ -167,12 +167,12 @@ flowchart LR
 **目标**：形成适应移动无人机和微小目标的视频级稳定轨迹。
 
 当前进度（2026-07-30）：ByteTrack 两阶段关联、Kalman 运动模型、轨迹生命周期、短时预测、MOT/审计
-JSONL 输出及 CLI 已完成本地实现和静态检查准备；在 GitHub Actions 云端测试通过前，下面的 ByteTrack
-基线任务保持未勾选。
+JSONL 输出及 CLI 已完成，并通过 GitHub Actions 的 Python 3.10/3.12 常规矩阵、M2 跟踪专项、M1 回放
+集成及原始权重 CPU 回归。下一增量进入轨迹可视化与 MOT 指标评测。
 
 任务：
 
-- [ ] 建立 ByteTrack 基线；
+- [x] 建立 ByteTrack 基线；
 - [ ] 接入 BoT-SORT 和视觉全局运动补偿；
 - [ ] 使用 IMU/云台运动先验辅助稳像；
 - [ ] 建立分层关联：高分检测、低分检测、运动门控、ReID；

@@ -17,7 +17,8 @@ validation remain gated by external data and NVIDIA target hardware.
   CPU/memory/NVIDIA device performance summaries.
 - The M2 baseline adds framework-neutral two-stage ByteTrack association, Kalman motion prediction, explicit track
   lifecycle/loss reasons, optional short-occlusion predictions, MOTChallenge export, and auditable track JSONL.
-- The ByteTrack checkbox in the roadmap remains open until the feature branch passes GitHub Actions cloud validation.
+- The ByteTrack baseline passed the Python 3.10/3.12 CI matrix plus focused M2 tracking, M1 replay, and legacy-weight
+  CPU cloud validation suites.
 - The complete execution order and acceptance gates are defined in [ROADMAP.md](ROADMAP.md).
 
 ## Repository layout

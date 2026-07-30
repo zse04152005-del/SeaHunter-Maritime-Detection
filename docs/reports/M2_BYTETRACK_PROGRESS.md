@@ -2,7 +2,7 @@
 
 Date: 2026-07-30
 Branch: `feature/m2-bytetrack-baseline`
-Status: implementation complete; cloud validation pending
+Status: ByteTrack baseline accepted by cloud validation
 
 ## Outcome
 
@@ -39,7 +39,16 @@ The feature branch is configured for the normal GitHub Actions quality and Pytho
 - MOT and audit JSONL behavior, including inferred-state filtering;
 - track schema invariants and replay CLI argument validation.
 
-The ROADMAP ByteTrack item must remain unchecked until both the normal CI matrix and focused M2 cloud suite pass.
+## Cloud validation result
+
+- Normal CI run [`30521766552`](https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30521766552)
+  passed quality checks and the Python 3.10/3.12 test matrix.
+- Cloud validation run [`30521766648`](https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30521766648)
+  passed the M2 tracking suite, M1 replay integration suite, and original-weight CPU regression.
+- JUnit reports were uploaded separately for both Python matrix versions and all focused validation jobs.
+
+The ROADMAP ByteTrack baseline item is therefore accepted. Dataset-level MOT accuracy remains a separate gate and
+will not be claimed until a leakage-free maritime video benchmark is available.
 
 ## Deliberate limitations of this baseline
 
