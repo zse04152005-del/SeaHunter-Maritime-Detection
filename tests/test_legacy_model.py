@@ -34,6 +34,8 @@ class LegacyModelTests(unittest.TestCase):
         self.assertEqual(tuple(output.shape), (1, 128, 16, 16))
         output.mean().backward()
         self.assertIsNotNone(tensor.grad)
+        dynamic_output = ema(self.torch.randn(2, 128, 15, 17))
+        self.assertEqual(tuple(dynamic_output.shape), (2, 128, 15, 17))
 
         with self.assertRaisesRegex(ValueError, "even spatial dimensions"):
             spd(self.torch.randn(1, 64, 31, 32))

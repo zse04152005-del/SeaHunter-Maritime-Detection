@@ -2009,8 +2009,6 @@ class EMA(nn.Module):
         self.groups = factor
         self.softmax = nn.Softmax(-1)
         self.agp = nn.AdaptiveAvgPool2d((1, 1))
-        self.pool_h = nn.AdaptiveAvgPool2d((None, 1))
-        self.pool_w = nn.AdaptiveAvgPool2d((1, None))
         
         # 优化点：使用 GroupNorm
         self.gn = nn.GroupNorm(c1 // self.groups, c1 // self.groups)
@@ -2021,8 +2019,10 @@ class EMA(nn.Module):
     def forward(self, x):
         b, c, h, w = x.size()
         group_x = x.reshape(b * self.groups, -1, h, w)
-        x_h = self.pool_h(group_x)
-        x_w = self.pool_w(group_x).permute(0, 1, 3, 2)
+        # ReduceMean is equivalent to adaptive pooling along one axis and remains
+        # exportable when batch or spatial dimensions are dynamic in ONNX.
+        x_h = group_x.mean(dim=3, keepdim=True)
+        x_w = group_x.mean(dim=2, keepdim=True).permute(0, 1, 3, 2)
         hw = self.conv1x1(torch.cat([x_h, x_w], dim=2))
         x_h, x_w = torch.split(hw, [h, w], dim=2)
         x1 = self.gn(group_x * x_h.sigmoid() * x_w.permute(0, 1, 3, 2).sigmoid())
