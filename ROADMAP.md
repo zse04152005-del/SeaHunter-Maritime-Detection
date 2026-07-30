@@ -168,7 +168,8 @@ flowchart LR
 
 当前进度（2026-07-30）：ByteTrack 两阶段关联、Kalman 运动模型、轨迹生命周期、短时预测、MOT/审计
 JSONL 输出及 CLI 已完成，并通过 GitHub Actions 的 Python 3.10/3.12 常规矩阵、M2 跟踪专项、M1 回放
-集成及原始权重 CPU 回归。下一增量进入轨迹可视化与 MOT 指标评测。
+集成及原始权重 CPU 回归。Track ID、生命周期、有限轨迹线以及 `observed`/`inferred` 差异化视频与
+WebSocket 可视化也已通过云端验证；下一增量进入 HOTA、IDF1、ID Switch 等 MOT 指标评测。
 
 任务：
 

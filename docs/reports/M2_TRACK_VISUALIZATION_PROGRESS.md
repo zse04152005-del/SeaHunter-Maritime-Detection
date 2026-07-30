@@ -2,7 +2,7 @@
 
 Date: 2026-07-30
 Branch: `feature/m2-bytetrack-baseline`
-Status: implementation complete; cloud validation pending
+Status: accepted by cloud validation
 
 ## Outcome
 
@@ -26,6 +26,15 @@ track identities and explicitly distinguishes detector-backed observations from 
 The focused `m2-tracking` workflow now includes visualization coverage for trail rendering, inferred styling,
 frame-alignment validation, preview JPEG encoding, metadata publication, and configuration validation. The ROADMAP
 MOT visualization task remains open because metric evaluation and dataset-level visual review are not yet complete.
+
+## Cloud validation result
+
+- Normal CI run [`30523130115`](https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30523130115)
+  passed quality checks and the Python 3.10/3.12 matrix.
+- Cloud validation run [`30523130081`](https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30523130081)
+  passed the M2 tracking/visualization suite, M1 replay suite, and original-weight CPU regression.
+- The ROADMAP combined MOT evaluation/visualization item remains open until metric orchestration and dataset-level
+  visual review are complete.
 
 ## Next increment
 
