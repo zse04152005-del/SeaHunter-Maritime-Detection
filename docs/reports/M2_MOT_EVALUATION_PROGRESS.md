@@ -2,7 +2,7 @@
 
 Date: 2026-07-30
 Branch: `feature/m2-bytetrack-baseline`
-Status: implementation complete; cloud validation pending
+Status: accepted by cloud validation
 
 ## Outcome
 
@@ -35,12 +35,20 @@ edge environments. Because that official revision still calls the removed `np.fl
 aliases, the SeaHunter-VIS import boundary restores only those three aliases before loading TrackEval. The upstream
 source remains unmodified, and Python 3.10/3.12 cloud tests cover the compatibility bridge.
 
-## Cloud verification gate
+## Cloud verification
 
-The normal Python 3.10/3.12 matrix installs the `evaluation` extra and runs the TrackEval-backed synthetic test. The
-focused `m2-evaluation` workflow additionally executes the CLI and uploads normalized metrics, the error index,
-normalized inputs, and native TrackEval outputs. The ROADMAP MOT evaluation/visualization task remains open until
-these jobs pass.
+Commit `61dffca` passed both required GitHub Actions workflows:
+
+- [CI run 30525990536](https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30525990536):
+  quality checks and the complete unit/integration suite passed on Python 3.10 and 3.12 with the `evaluation` extra.
+- [Cloud validation run 30525990533](https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30525990533):
+  the `m2-evaluation` job installed the pinned TrackEval revision, passed all four focused tests, executed the CLI,
+  and uploaded the normalized metrics, error index, normalized inputs, and native TrackEval outputs.
+
+The deterministic synthetic sequence produced HOTA `0.687184`, DetA `0.777778`, AssA `0.607143`, LocA `1.0`,
+MOTA `0.625`, MOTP `1.0`, recall/precision `0.875`, and IDF1/IDRecall/IDPrecision `0.625`. Both TrackEval and the
+independent frame index reported eight ground-truth detections, eight predictions, one false negative, one false
+positive, one ID switch, and one fragmentation; the frame index recorded seven matches across two error frames.
 
 ## Dataset acceptance still required
 

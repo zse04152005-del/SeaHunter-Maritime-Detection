@@ -169,10 +169,11 @@ flowchart LR
 当前进度（2026-07-30）：ByteTrack 两阶段关联、Kalman 运动模型、轨迹生命周期、短时预测、MOT/审计
 JSONL 输出及 CLI 已完成，并通过 GitHub Actions 的 Python 3.10/3.12 常规矩阵、M2 跟踪专项、M1 回放
 集成及原始权重 CPU 回归。Track ID、生命周期、有限轨迹线以及 `observed`/`inferred` 差异化视频与
-WebSocket 可视化也已通过云端验证；下一增量进入 HOTA、IDF1、ID Switch 等 MOT 指标评测。
+WebSocket 可视化也已通过云端验证。
 
 MOT 指标评测代码已接入固定提交的官方 TrackEval，实现 class-agnostic MOTChallenge 适配、HOTA/CLEAR/
-Identity 指标归一化报告及逐帧错误索引；在 GitHub Actions 数值验证通过前，组合任务保持未勾选。
+Identity 指标归一化报告及逐帧错误索引。Python 3.10/3.12 常规矩阵和 M2 评测专项均已通过；合成数据
+仅用于验证指标接线与已知错误计数，不作为真实海域跟踪质量结论。
 
 任务：
 
@@ -186,7 +187,7 @@ Identity 指标归一化报告及逐帧错误索引；在 GitHub Actions 数值�
 - [ ] 建立短时遮挡轨迹插值和有限外推；
 - [ ] 为每个轨迹点标记 `observed` 或 `inferred`；
 - [ ] 输出轨迹协方差和丢失原因；
-- [ ] 建立 MOT 格式评测和可视化。
+- [x] 建立 MOT 格式评测和可视化。
 
 交付物：
 
