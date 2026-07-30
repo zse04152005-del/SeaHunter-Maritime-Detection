@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "suite_id": "m0-detector-nwd-ablation-v1",
+  "description": "Paired CIoU-only and CIoU/NWD detector training plan with three fixed seeds.",
+  "defaults": {
+    "model": "configs/models/seahunter_v1.yaml",
+    "data": "configs/data/seadronessee.example.yaml",
+    "initialization_weights": null,
+    "project": "runs/experiments/m0-detector-nwd-ablation-v1",
+    "epochs": 150,
+    "image_size": 1024,
+    "batch_size": 4,
+    "workers": 2,
+    "nwd_constant": 12.8
+  },
+  "variants": [
+    {
+      "id": "ciou-only",
+      "description": "SeaHunter architecture with NWD disabled.",
+      "nwd_weight": 0.0
+    },
+    {
+      "id": "ciou-nwd-50",
+      "description": "SeaHunter architecture with equal CIoU and NWD blending.",
+      "nwd_weight": 0.5
+    }
+  ],
+  "seeds": [0, 1, 2]
+}

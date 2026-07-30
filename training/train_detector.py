@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from seahunter.runtime import activate_legacy_ultralytics  # noqa: E402
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", type=Path, default=ROOT / "configs/models/seahunter_v1.yaml")
     parser.add_argument("--data", type=Path, default=ROOT / "configs/data/seadronessee.example.yaml")
@@ -26,11 +26,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device", default="0")
     parser.add_argument("--name", default="seahunter_v1")
     parser.add_argument("--project", type=Path, default=ROOT / "runs/train")
-    return parser.parse_args()
+    parser.add_argument("--nwd-weight", type=float, default=0.5)
+    parser.add_argument("--nwd-constant", type=float, default=12.8)
+    return parser.parse_args(argv)
 
 
-def main() -> int:
-    args = parse_args()
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
     if not args.model.is_file():
         raise FileNotFoundError(args.model)
     if not args.data.is_file():
@@ -65,6 +67,8 @@ def main() -> int:
         patience=30,
         exist_ok=False,
         amp=True,
+        nwd_weight=args.nwd_weight,
+        nwd_constant=args.nwd_constant,
     )
     return 0
 

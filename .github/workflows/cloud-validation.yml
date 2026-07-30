@@ -12,6 +12,7 @@ on:
         default: legacy-detector
         type: choice
         options:
+          - m0-governance
           - legacy-detector
           - m1-replay
           - m2-tracking
@@ -27,6 +28,35 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  m0-governance:
+    if: github.event_name == 'push' || inputs.suite == 'm0-governance' || inputs.suite == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install governance test environment
+        run: uv sync --extra dev
+      - name: Validate baseline and experiment matrix
+        run: |
+          mkdir -p reports
+          uv run pytest \
+            tests/test_baseline_integrity.py \
+            tests/test_experiment_plan.py \
+            --junitxml=reports/m0-governance.xml
+          uv run python training/run_experiments.py \
+            --config configs/experiments/m0_detector_nwd_ablation.json \
+            --dry-run > reports/m0-detector-experiment-plan.json
+      - name: Upload governance reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m0-governance-reports
+          path: reports/
+
   legacy-detector:
     if: github.event_name == 'push' || inputs.suite == 'legacy-detector' || inputs.suite == 'all'
     runs-on: ubuntu-latest

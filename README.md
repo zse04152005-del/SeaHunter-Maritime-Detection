@@ -59,8 +59,24 @@ uv pip install -e ".[legacy-detector]"
 ```
 
 The authoritative test matrix runs in GitHub Actions on Python 3.10 and 3.12. The manual `cloud-validation`
-workflow provides focused `legacy-detector`, `m1-replay`, `m2-tracking`, `m2-evaluation`, `m2-gmc`, and `all` suites
-with JUnit and metric artifacts.
+workflow provides focused `m0-governance`, `legacy-detector`, `m1-replay`, `m2-tracking`, `m2-evaluation`, `m2-gmc`,
+and `all` suites with JUnit and metric artifacts.
+
+## Detector experiment planning
+
+Validate and expand the frozen CIoU/NWD detector ablation before allocating a GPU:
+
+```powershell
+python training/run_experiments.py `
+  --config configs/experiments/m0_detector_nwd_ablation.json `
+  --dry-run
+```
+
+The strict configuration expands CIoU-only and CIoU/NWD variants over three fixed seeds, rejects unknown keys,
+duplicate variants, invalid loss controls, and repository-escaping paths, and records a SHA-256 of the experiment
+source. Removing `--dry-run` requires the legacy detector stack plus the real dataset and writes a per-run manifest
+with the Git commit, dependency version, device, seed, and complete resolved controls. Dataset-free CI validates the
+plan only and never reports training quality.
 
 ## Video replay
 

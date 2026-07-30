@@ -62,5 +62,6 @@
 
 ## M0 exit work still required
 
-- Replace the single hard-coded training script with a configuration-driven experiment matrix.
+- The configuration-driven multi-variant experiment matrix is implemented; cloud dry-run acceptance is recorded in
+  `docs/reports/M0_GOVERNANCE_PROGRESS.md`.
 - Produce TensorRT consistency and latency results on the target NVIDIA hardware.
