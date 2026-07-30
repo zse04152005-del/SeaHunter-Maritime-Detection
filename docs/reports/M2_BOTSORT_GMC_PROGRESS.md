@@ -2,7 +2,7 @@
 
 Date: 2026-07-30
 Branch: `feature/m2-bytetrack-baseline`
-Status: implementation complete; cloud validation pending
+Status: accepted by cloud validation
 
 ## Outcome
 
@@ -31,18 +31,25 @@ gates plus clear-frame tracklet templates.
 - Versioned starting configuration in `configs/tracking/botsort.maritime.yaml`.
 - Deterministic synthetic camera-pan no-GMC/GMC ablation and focused cloud job.
 
-## Cloud verification gate
+## Cloud verification
 
-The Python 3.10/3.12 CI matrix must pass the complete test suite. The focused `m2-gmc` job additionally runs the
-GMC estimator, BoT-SORT integration, audit-output, CLI, and synthetic ablation tests, generates a JSON comparison,
-and uploads the JUnit and ablation artifacts.
+Commit `3966591` passed both required GitHub Actions workflows:
 
-Expected synthetic behavior is three no-GMC identity switches versus zero with GMC over four translated frames.
-This proves deterministic estimator/tracker integration only; it is not a real maritime dataset claim.
+- [CI run 30529822102](https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30529822102):
+  quality checks and the complete unit/integration suite passed on Python 3.10 and 3.12.
+- [Cloud validation run 30529821909](https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30529821909):
+  all 13 focused `m2-gmc` tests passed, the synthetic camera-pan CLI experiment completed, and its JUnit and JSON
+  reports were uploaded. M1 replay, M2 tracking, M2 evaluation, and the original-weight CPU regression also passed.
+
+All three estimable frame transitions accepted GMC, with mean RANSAC inlier quality `0.984727` and maximum
+translation error `0.019081 px`. With otherwise identical tracking settings, the deterministic four-frame pan used
+track IDs `[1, 2, 3, 4]` and produced three ID switches without GMC; visual GMC retained track ID `[1]` and produced
+zero ID switches. The report explicitly records `dataset_claim: false`.
 
 ## Real-data acceptance still required
 
-The ROADMAP moving-camera benefit gate remains open until the same detector outputs and tracker parameters are
-evaluated with GMC disabled/enabled on a leakage-free maritime benchmark stratified by camera motion, target size,
+The implementation task is accepted, but the ROADMAP real moving-camera benefit gate remains open until the same
+detector outputs and tracker parameters are evaluated with GMC disabled/enabled on a leakage-free maritime benchmark
+stratified by camera motion, target size,
 sea state, visibility, and weather. Reports must include HOTA, AssA, IDF1, ID switches, fragmentation, GMC fallback
 rate, and per-frame failure review.

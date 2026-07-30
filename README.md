@@ -20,6 +20,8 @@ validation remain gated by external data and NVIDIA target hardware.
 - A selectable BoT-SORT motion baseline adds foreground-masked sparse optical flow, RANSAC affine camera-motion
   compensation, plausibility/quality fallback gates, and per-frame GMC audit metadata. Appearance ReID remains off
   until the separate maritime small-target quality gate is implemented.
+- The BoT-SORT/GMC implementation passed the Python 3.10/3.12 matrix and focused cloud ablation; its synthetic
+  ID-switch improvement is a wiring check, not a real maritime performance claim.
 - The ByteTrack baseline passed the Python 3.10/3.12 CI matrix plus focused M2 tracking, M1 replay, and legacy-weight
   CPU cloud validation suites.
 - The complete execution order and acceptance gates are defined in [ROADMAP.md](ROADMAP.md).
