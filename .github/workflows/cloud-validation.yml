@@ -1,0 +1,105 @@
+name: cloud-validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: Cloud validation suite
+        required: true
+        default: legacy-detector
+        type: choice
+        options:
+          - legacy-detector
+          - m1-replay
+          - m2-tracking
+          - all
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloud-validation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  legacy-detector:
+    if: inputs.suite == 'legacy-detector' || inputs.suite == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install legacy CPU environment
+        run: uv sync --extra dev --extra video --extra tracking --extra legacy-detector
+      - name: Run original-weight CPU regression
+        env:
+          SEAHUNTER_RUN_MODEL_TESTS: "1"
+        run: |
+          mkdir -p reports
+          uv run pytest tests/test_legacy_model.py \
+            --junitxml=reports/legacy-detector.xml
+      - name: Upload legacy reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: legacy-detector-reports
+          path: reports/
+
+  m1-replay:
+    if: inputs.suite == 'm1-replay' || inputs.suite == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install replay environment
+        run: uv sync --extra dev --extra video --extra edge --extra parquet --extra tracking
+      - name: Run replay and edge-output integration
+        run: |
+          mkdir -p reports
+          uv run pytest \
+            tests/test_opencv_replay.py \
+            tests/test_preview.py \
+            tests/test_parquet_sink.py \
+            tests/test_result_sinks.py \
+            --junitxml=reports/m1-replay.xml
+      - name: Upload replay reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-replay-reports
+          path: reports/
+
+  m2-tracking:
+    if: inputs.suite == 'm2-tracking' || inputs.suite == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install tracking environment
+        run: uv sync --extra dev --extra video --extra edge --extra tracking
+      - name: Run ByteTrack baseline validation
+        run: |
+          mkdir -p reports
+          uv run pytest \
+            tests/test_bytetrack.py \
+            tests/test_tracking_outputs.py \
+            tests/test_schemas.py \
+            tests/test_edge_cli.py \
+            --junitxml=reports/m2-tracking.xml
+      - name: Upload tracking reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2-tracking-reports
+          path: reports/

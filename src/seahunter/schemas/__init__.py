@@ -10,6 +10,8 @@ from .models import (
     RiskEvent,
     SourceKind,
     TelemetryPacket,
+    TrackLifecycle,
+    TrackLossReason,
     TrackState,
 )
 
@@ -23,5 +25,7 @@ __all__ = [
     "RiskEvent",
     "SourceKind",
     "TelemetryPacket",
+    "TrackLifecycle",
+    "TrackLossReason",
     "TrackState",
 ]

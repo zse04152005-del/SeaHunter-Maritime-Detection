@@ -15,9 +15,12 @@ from seahunter.services import (
     ParquetResultSink,
     PreviewHub,
     PreviewServer,
+    TrackingSink,
+    TrackStateSink,
     create_preview_app,
     run_replay,
 )
+from seahunter.tracking import ByteTrackConfig, ByteTracker, MOTChallengeWriter, TrackJsonlWriter
 from seahunter.video import OpenCVFrameReader, OpenCVReaderConfig, parse_video_source
 
 
@@ -57,6 +60,25 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--preview-host", default="127.0.0.1")
     parser.add_argument("--preview-port", type=int, default=8000)
     parser.add_argument("--preview-quality", type=int, default=80)
+    parser.add_argument("--tracker", choices=("none", "bytetrack"), default="none")
+    parser.add_argument("--tracks-jsonl", type=Path, help="auditable per-frame track-state JSONL")
+    parser.add_argument("--mot-output", type=Path, help="MOTChallenge ten-column tracking output")
+    parser.add_argument("--track-high-threshold", type=float, default=0.6)
+    parser.add_argument("--track-low-threshold", type=float, default=0.1)
+    parser.add_argument("--track-new-threshold", type=float, default=0.7)
+    parser.add_argument("--track-first-iou", type=float, default=0.3)
+    parser.add_argument("--track-second-iou", type=float, default=0.2)
+    parser.add_argument("--track-max-lost", type=int, default=30)
+    parser.add_argument("--track-minimum-hits", type=int, default=1)
+    parser.add_argument("--track-frame-rate", type=float, default=30.0)
+    parser.add_argument("--track-inferred-confidence-decay", type=float, default=0.9)
+    parser.add_argument("--track-class-agnostic", action="store_true")
+    parser.add_argument("--track-emit-lost", action="store_true")
+    parser.add_argument(
+        "--mot-include-inferred",
+        action="store_true",
+        help="include motion-model predictions in MOT output; audit JSONL always preserves observation type",
+    )
     parser.add_argument(
         "--include-runtime-timings",
         action="store_true",
@@ -103,8 +125,14 @@ def main(argv: list[str] | None = None) -> int:
             "summary output": summary_path,
             "Parquet output": args.parquet,
             "annotated video": args.annotated_video,
+            "track JSONL output": args.tracks_jsonl,
+            "MOT output": args.mot_output,
         },
     )
+    if args.tracker == "none" and (args.tracks_jsonl is not None or args.mot_output is not None):
+        raise SystemExit("tracking outputs require --tracker bytetrack")
+    if args.mot_include_inferred and args.mot_output is None:
+        raise SystemExit("--mot-include-inferred requires --mot-output")
     monitor = RuntimeResourceMonitor()
     sinks: list[FrameResultSink] = []
     if args.parquet is not None:
@@ -117,6 +145,37 @@ def main(argv: list[str] | None = None) -> int:
                 codec=args.video_codec,
             )
         )
+    tracking_sink: TrackingSink | None = None
+    if args.tracker == "bytetrack":
+        track_outputs: list[TrackStateSink] = []
+        if args.tracks_jsonl is not None:
+            track_outputs.append(TrackJsonlWriter(args.tracks_jsonl))
+        if args.mot_output is not None:
+            track_outputs.append(
+                MOTChallengeWriter(
+                    args.mot_output,
+                    include_inferred=args.mot_include_inferred,
+                )
+            )
+        tracking_sink = TrackingSink(
+            ByteTracker(
+                ByteTrackConfig(
+                    high_confidence_threshold=args.track_high_threshold,
+                    low_confidence_threshold=args.track_low_threshold,
+                    new_track_threshold=args.track_new_threshold,
+                    first_match_iou_threshold=args.track_first_iou,
+                    second_match_iou_threshold=args.track_second_iou,
+                    max_lost_frames=args.track_max_lost,
+                    minimum_confirmed_hits=args.track_minimum_hits,
+                    frame_rate=args.track_frame_rate,
+                    inferred_confidence_decay=args.track_inferred_confidence_decay,
+                    class_aware=not args.track_class_agnostic,
+                    emit_lost_predictions=args.track_emit_lost,
+                )
+            ),
+            sinks=track_outputs,
+        )
+        sinks.append(tracking_sink)
 
     server: PreviewServer | None = None
     if args.preview:
@@ -143,7 +202,14 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         if server is not None:
             server.stop()
-    print(json.dumps(summary.to_dict(), ensure_ascii=False, sort_keys=True, indent=2))
+    output_summary = summary.to_dict()
+    if tracking_sink is not None:
+        output_summary["tracking"] = {
+            "tracker_id": tracking_sink.tracker.tracker_id,
+            "frames_processed": tracking_sink.frames_processed,
+            "states_emitted": tracking_sink.states_emitted,
+        }
+    print(json.dumps(output_summary, ensure_ascii=False, sort_keys=True, indent=2))
     return 0
 
 

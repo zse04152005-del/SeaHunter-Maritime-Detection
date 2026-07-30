@@ -1,9 +1,23 @@
+schema_version: 1
 tracker_type: bytetrack
-track_high_thresh: 0.25
-track_low_thresh: 0.05
-new_track_thresh: 0.30
-track_buffer: 90
-match_thresh: 0.80
-fuse_score: true
+implementation: seahunter.tracking.ByteTracker
 
-# These are starting values only. They must be calibrated on video-level MOT data.
+# Framework-neutral M2 baseline. These keys map directly to ByteTrackConfig.
+high_confidence_threshold: 0.60
+low_confidence_threshold: 0.10
+new_track_threshold: 0.70
+first_match_iou_threshold: 0.30
+second_match_iou_threshold: 0.20
+max_lost_frames: 30
+minimum_confirmed_hits: 1
+frame_rate: 30.0
+inferred_confidence_decay: 0.90
+class_aware: true
+emit_lost_predictions: false
+
+outputs:
+  mot_include_inferred: false
+  audit_jsonl: true
+
+# Starting values only: calibrate by target size, weather, camera motion, and source FPS
+# on a leakage-free maritime MOT validation split before accepting the baseline.

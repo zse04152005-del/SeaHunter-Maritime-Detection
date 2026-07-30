@@ -22,10 +22,24 @@ class EdgeCliTests(unittest.TestCase):
                 "--annotated-video",
                 "flight.avi",
                 "--preview",
+                "--tracker",
+                "bytetrack",
+                "--tracks-jsonl",
+                "tracks.jsonl",
+                "--track-frame-rate",
+                "25",
+                "--track-emit-lost",
+                "--mot-output",
+                "tracks.txt",
+                "--mot-include-inferred",
             ]
         )
         self.assertTrue(args.preview)
         self.assertEqual(str(args.parquet), "flight.parquet")
+        self.assertEqual(args.tracker, "bytetrack")
+        self.assertEqual(args.track_frame_rate, 25.0)
+        self.assertTrue(args.track_emit_lost)
+        self.assertTrue(args.mot_include_inferred)
 
     def test_edge_service_injects_always_on_defaults(self) -> None:
         with patch("seahunter.tools.edge_service.replay_main", return_value=0) as replay:

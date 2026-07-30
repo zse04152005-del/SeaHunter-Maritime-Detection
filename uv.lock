@@ -1745,6 +1745,12 @@ legacy-detector = [
 parquet = [
     { name = "pyarrow" },
 ]
+tracking = [
+    { name = "numpy" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+]
 video = [
     { name = "numpy" },
     { name = "opencv-python" },
@@ -1756,6 +1762,7 @@ requires-dist = [
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27,<1" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11" },
     { name = "numpy", marker = "extra == 'legacy-detector'", specifier = ">=1.24,<2.3" },
+    { name = "numpy", marker = "extra == 'tracking'", specifier = ">=1.24,<2.3" },
     { name = "numpy", marker = "extra == 'video'", specifier = ">=1.24,<2.3" },
     { name = "onnx", marker = "extra == 'export'", specifier = ">=1.17,<=1.19.1" },
     { name = "onnxruntime", marker = "extra == 'export'", specifier = ">=1.20,<2" },
@@ -1769,13 +1776,14 @@ requires-dist = [
     { name = "pyyaml", marker = "extra == 'legacy-detector'", specifier = ">=6" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
     { name = "scipy", marker = "extra == 'legacy-detector'", specifier = ">=1.10" },
+    { name = "scipy", marker = "extra == 'tracking'", specifier = ">=1.10,<2" },
     { name = "torch", marker = "extra == 'legacy-detector'", specifier = ">=2.2" },
     { name = "torchvision", marker = "extra == 'legacy-detector'", specifier = ">=0.17" },
     { name = "tqdm", marker = "extra == 'legacy-detector'", specifier = ">=4.65" },
     { name = "ultralytics", marker = "extra == 'legacy-detector'", specifier = "==8.3.234" },
     { name = "uvicorn", extras = ["standard"], marker = "extra == 'edge'", specifier = ">=0.32,<1" },
 ]
-provides-extras = ["video", "edge", "parquet", "legacy-detector", "export", "dev"]
+provides-extras = ["video", "edge", "parquet", "tracking", "legacy-detector", "export", "dev"]
 
 [[package]]
 name = "setuptools"

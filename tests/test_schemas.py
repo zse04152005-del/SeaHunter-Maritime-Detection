@@ -3,7 +3,14 @@ from __future__ import annotations
 import unittest
 from datetime import UTC, datetime
 
-from seahunter.schemas import Detection, FramePacket, GeoEstimate, ObservationKind, TrackState
+from seahunter.schemas import (
+    Detection,
+    FramePacket,
+    GeoEstimate,
+    ObservationKind,
+    TrackLossReason,
+    TrackState,
+)
 
 
 class SchemaTests(unittest.TestCase):
@@ -67,6 +74,31 @@ class SchemaTests(unittest.TestCase):
                 range_rate_m_s=-1.0,
                 quality=0.8,
                 absolute=True,
+            )
+
+    def test_observed_track_cannot_have_lost_reason(self) -> None:
+        with self.assertRaises(ValueError):
+            TrackState(
+                track_id=1,
+                frame_id=1,
+                captured_at=datetime.now(UTC),
+                bbox_xyxy=(0.0, 0.0, 10.0, 10.0),
+                class_id=0,
+                confidence=0.8,
+                observation=ObservationKind.OBSERVED,
+                lost_reason=TrackLossReason.UNMATCHED,
+            )
+
+    def test_inferred_track_requires_lost_reason(self) -> None:
+        with self.assertRaises(ValueError):
+            TrackState(
+                track_id=1,
+                frame_id=1,
+                captured_at=datetime.now(UTC),
+                bbox_xyxy=(0.0, 0.0, 10.0, 10.0),
+                class_id=0,
+                confidence=0.8,
+                observation=ObservationKind.INFERRED,
             )
 
 

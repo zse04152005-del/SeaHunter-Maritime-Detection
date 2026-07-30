@@ -166,6 +166,10 @@ flowchart LR
 
 **目标**：形成适应移动无人机和微小目标的视频级稳定轨迹。
 
+当前进度（2026-07-30）：ByteTrack 两阶段关联、Kalman 运动模型、轨迹生命周期、短时预测、MOT/审计
+JSONL 输出及 CLI 已完成本地实现和静态检查准备；在 GitHub Actions 云端测试通过前，下面的 ByteTrack
+基线任务保持未勾选。
+
 任务：
 
 - [ ] 建立 ByteTrack 基线；

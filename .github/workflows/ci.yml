@@ -2,14 +2,19 @@ name: ci
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, "feature/**"]
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  framework-neutral-tests:
+  quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,14 +23,41 @@ jobs:
           python-version: "3.12"
           enable-cache: true
       - name: Install development environment
-        run: uv sync --extra dev --extra video --extra edge --extra parquet
+        run: uv sync --extra dev --extra video --extra edge --extra parquet --extra tracking
       - name: Lint
         run: uv run ruff check src tests training evaluation
       - name: Format check
         run: uv run ruff format --check src tests training evaluation
       - name: Type check
         run: uv run mypy src/seahunter
-      - name: Unit tests
-        run: uv run pytest
       - name: Static baseline audit
         run: uv run python evaluation/inspect_baseline.py
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+      - name: Install test environment
+        run: uv sync --extra dev --extra video --extra edge --extra parquet --extra tracking
+      - name: Run unit and integration tests
+        run: |
+          mkdir -p reports
+          uv run pytest \
+            --junitxml=reports/pytest-${{ matrix.python-version }}.xml \
+            --cov=src/seahunter \
+            --cov-report=xml:reports/coverage-${{ matrix.python-version }}.xml
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-py${{ matrix.python-version }}
+          path: reports/
+          if-no-files-found: warn

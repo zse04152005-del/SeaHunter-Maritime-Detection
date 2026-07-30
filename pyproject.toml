@@ -27,6 +27,10 @@ edge = [
 parquet = [
   "pyarrow>=16,<23",
 ]
+tracking = [
+  "numpy>=1.24,<2.3",
+  "scipy>=1.10,<2",
+]
 legacy-detector = [
   "numpy>=1.24,<2.3",
   "opencv-python>=4.8,<5",

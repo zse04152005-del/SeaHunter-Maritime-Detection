@@ -4,7 +4,9 @@ SeaHunter-VIS is the system-level evolution of the original SeaHunter maritime d
 
 ## Current status
 
-The repository has completed the locally verifiable M0 work and has started **M1: video-stream detection MVP**. Dataset metric reproduction and TensorRT validation remain gated by external data and NVIDIA target hardware.
+The repository has completed the locally verifiable M0 work and implemented the M1 video-stream foundation. It has
+now started **M2: multi-object tracking and trajectory recovery**. Dataset metric reproduction and TensorRT
+validation remain gated by external data and NVIDIA target hardware.
 
 - The original detector and weight are retained as a reproducible legacy baseline.
 - Historical training and inference scripts live in `legacy/`.
@@ -13,6 +15,9 @@ The repository has completed the locally verifiable M0 work and has started **M1
 - M1 now includes file/device/RTSP/SRT/HTTP ingestion, decode timestamps, live-source reconnection, a bounded
   freshness-first worker, deterministic JSONL/Parquet replay, annotated video, WebSocket JPEG preview, and
   CPU/memory/NVIDIA device performance summaries.
+- The M2 baseline adds framework-neutral two-stage ByteTrack association, Kalman motion prediction, explicit track
+  lifecycle/loss reasons, optional short-occlusion predictions, MOTChallenge export, and auditable track JSONL.
+- The ByteTrack checkbox in the roadmap remains open until the feature branch passes GitHub Actions cloud validation.
 - The complete execution order and acceptance gates are defined in [ROADMAP.md](ROADMAP.md).
 
 ## Repository layout
@@ -36,7 +41,7 @@ The target development Python is 3.10 or 3.11. Python 3.12 may be used for frame
 ```powershell
 uv venv --python 3.11
 .venv\Scripts\Activate.ps1
-uv pip install -e ".[dev,video,edge,parquet]"
+uv pip install -e ".[dev,video,edge,parquet,tracking]"
 python -m unittest discover -s tests -v
 python evaluation/inspect_baseline.py
 ```
@@ -46,6 +51,9 @@ Install the optional legacy detector stack only when running model tests:
 ```powershell
 uv pip install -e ".[legacy-detector]"
 ```
+
+The authoritative test matrix runs in GitHub Actions on Python 3.10 and 3.12. The manual `cloud-validation`
+workflow provides focused `legacy-detector`, `m1-replay`, `m2-tracking`, and `all` suites with JUnit artifacts.
 
 ## Video replay
 
@@ -89,6 +97,26 @@ appropriate firewall and access controls.
 Use `--max-reconnect-attempts -1` for an always-on service. The default finite retry budget is safer for CLI jobs.
 Hardware decoding is requested through the selected OpenCV backend when available, but NVDEC must still be verified
 on the target NVIDIA device before it is treated as an accepted deployment capability.
+
+## ByteTrack baseline
+
+Enable the M2 tracker during replay and write both evaluation and audit outputs:
+
+```powershell
+seahunter-video-replay .\samples\flight.mp4 `
+  --output .\outputs\flight.jsonl `
+  --tracker bytetrack `
+  --tracks-jsonl .\outputs\flight-tracks.jsonl `
+  --mot-output .\outputs\flight-mot.txt `
+  --track-frame-rate 25 `
+  --track-emit-lost `
+  --device cpu
+```
+
+MOT output contains observed states by default. Add `--mot-include-inferred` only when the downstream evaluator is
+intended to consume motion-model predictions. The audit JSONL always retains `observed`/`inferred`, lifecycle,
+association score, covariance, age, time-since-update, tracker configuration ID, and loss reason. Starting parameters
+are recorded in `configs/tracking/bytetrack.maritime.yaml` and must be calibrated on video-level maritime data.
 
 ## Important licensing note
 

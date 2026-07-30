@@ -26,6 +26,22 @@ class ObservationKind(str, Enum):
     INFERRED = "inferred"
 
 
+class TrackLifecycle(str, Enum):
+    """Lifecycle state of one tracker identity."""
+
+    TENTATIVE = "tentative"
+    CONFIRMED = "confirmed"
+    LOST = "lost"
+    REMOVED = "removed"
+
+
+class TrackLossReason(str, Enum):
+    """Auditable reason why a track is no longer directly observed."""
+
+    UNMATCHED = "unmatched"
+    EXPIRED = "expired"
+
+
 class EventStatus(str, Enum):
     """Lifecycle states for a risk event."""
 
@@ -142,12 +158,37 @@ class TrackState:
     observation: ObservationKind
     velocity_xy_px_s: tuple[float, float] = (0.0, 0.0)
     covariance_xy: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)
+    lifecycle: TrackLifecycle = TrackLifecycle.CONFIRMED
+    tracker_id: str | None = None
+    age_frames: int = 1
+    time_since_update: int = 0
+    association_score: float | None = None
+    lost_reason: TrackLossReason | None = None
 
     def __post_init__(self) -> None:
         if self.track_id < 0 or self.frame_id < 0:
             raise ValueError("track_id and frame_id must be non-negative")
+        x1, y1, x2, y2 = self.bbox_xyxy
+        if not all(isfinite(value) for value in self.bbox_xyxy) or x2 < x1 or y2 < y1:
+            raise ValueError("bbox_xyxy must be finite and satisfy x2 >= x1 and y2 >= y1")
+        if self.class_id < 0:
+            raise ValueError("class_id must be non-negative")
         if not 0.0 <= self.confidence <= 1.0:
             raise ValueError("confidence must be within [0, 1]")
+        if not all(isfinite(value) for value in self.velocity_xy_px_s + self.covariance_xy):
+            raise ValueError("velocity and covariance values must be finite")
+        if self.tracker_id is not None and not self.tracker_id.strip():
+            raise ValueError("tracker_id must not be empty when provided")
+        if self.age_frames <= 0:
+            raise ValueError("age_frames must be positive")
+        if self.time_since_update < 0:
+            raise ValueError("time_since_update must be non-negative")
+        if self.association_score is not None and not 0.0 <= self.association_score <= 1.0:
+            raise ValueError("association_score must be within [0, 1]")
+        if self.observation is ObservationKind.OBSERVED and self.lost_reason is not None:
+            raise ValueError("observed track states must not have a lost_reason")
+        if self.observation is ObservationKind.INFERRED and self.lost_reason is None:
+            raise ValueError("inferred track states must have a lost_reason")
         _validate_aware_timestamp(self.captured_at, "captured_at")
 
 
