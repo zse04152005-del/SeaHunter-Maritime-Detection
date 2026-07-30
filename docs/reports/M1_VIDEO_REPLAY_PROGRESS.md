@@ -1,7 +1,8 @@
 # M1 video replay progress report
 
 Date: 2026-07-30  
-Branch: `develop`
+Branch: `feature/m2-bytetrack-baseline`
+Status: software/cloud contract accepted; NVIDIA target gate remains open
 
 ## Outcome
 
@@ -72,6 +73,19 @@ flowchart LR
 - Ruff lint/format and strict mypy checks pass for the new system code.
 - Framework-neutral suite: 48 tests passed.
 - Legacy detector video replay is covered by an opt-in CPU model test using `SEAHUNTER_RUN_MODEL_TESTS=1`.
+
+### Decoder audit cloud acceptance
+
+- Accepted commit: `07f94d0016dc20e87ddb253af0d0d561aae223ba`.
+- The focused M1 job passed 11 tests in 1.63 seconds, including three decoder build/selection/fallback tests.
+- The Ubuntu runner's OpenCV 4.14.0 report recorded FFmpeg compiled, GStreamer not compiled, zero visible CUDA
+  devices, and `nvdec_verified=false`; this is a negative-capability audit, not a target-device performance result.
+- Cloud validation:
+  <https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30533193021>
+- Python 3.10/3.12 CI and quality gates:
+  <https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30533193000>
+- M1 report artifact:
+  <https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30533193021/artifacts/8755527105>
 
 ## Remaining M1 work
 

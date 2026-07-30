@@ -136,7 +136,7 @@ flowchart LR
 任务：
 
 - [x] 设计视频源抽象：文件、USB、RTSP、SRT；
-- [ ] 使用 GStreamer/FFmpeg，优先 NVDEC 硬件解码；
+- [ ] 使用 GStreamer/FFmpeg，优先 NVDEC 硬件解码；BLOCKED：后端选择、能力报告与软件回退已通过云端验证，实际 NVDEC 仍需 NVIDIA 目标设备；
 - [x] 实现有界帧队列和“丢旧保新”策略；
 - [x] 实现采集时间、解码时间和推理时间统计；
 - [x] 实现 RTSP 超时、指数退避重连和坏帧处理；
