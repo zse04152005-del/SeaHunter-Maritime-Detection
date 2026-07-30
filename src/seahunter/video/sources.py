@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from hashlib import sha256
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -20,6 +21,25 @@ class VideoSource:
     @property
     def is_network(self) -> bool:
         return self.kind in {SourceKind.RTSP, SourceKind.SRT, SourceKind.HTTP}
+
+    @property
+    def is_live(self) -> bool:
+        """Return whether transient read failures should trigger reconnection."""
+
+        return self.kind is not SourceKind.FILE
+
+    def suggested_id(self) -> str:
+        """Return a stable identifier without exposing URL credentials."""
+
+        if self.kind is SourceKind.FILE:
+            return Path(self.location).stem or "video-file"
+        if self.kind is SourceKind.DEVICE:
+            return f"device-{self.location}"
+
+        parsed = urlparse(self.location)
+        host = (parsed.hostname or "stream").replace(".", "-")
+        digest = sha256(self.location.encode("utf-8")).hexdigest()[:8]
+        return f"{self.kind.value}-{host}-{digest}"
 
 
 def parse_video_source(value: str) -> VideoSource:

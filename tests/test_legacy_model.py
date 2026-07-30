@@ -4,6 +4,7 @@ import os
 import unittest
 from datetime import UTC, datetime
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 RUN_MODEL_TESTS = os.getenv("SEAHUNTER_RUN_MODEL_TESTS") == "1"
 
@@ -79,6 +80,42 @@ class LegacyModelTests(unittest.TestCase):
         detections = detector.infer(frame)
         self.assertIsInstance(detections, list)
         self.assertTrue(detector.detector_id.startswith("ultralytics-8.3.234:"))
+
+    def test_video_replay_with_legacy_detector(self) -> None:
+        import cv2
+
+        from seahunter.runtime import UltralyticsDetector
+        from seahunter.services import run_replay
+        from seahunter.video import OpenCVFrameReader, OpenCVReaderConfig, parse_video_source
+
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            video = root / "legacy-smoke.avi"
+            writer = cv2.VideoWriter(
+                str(video),
+                cv2.VideoWriter_fourcc(*"MJPG"),
+                5.0,
+                (256, 256),
+            )
+            if not writer.isOpened():
+                self.skipTest("the installed OpenCV build cannot create MJPG video")
+            writer.write(self.np.zeros((256, 256, 3), dtype=self.np.uint8))
+            writer.release()
+
+            detector = UltralyticsDetector(
+                self.root / "weights/seahunter_best.pt",
+                repo_root=self.root,
+                imgsz=256,
+                device="cpu",
+            )
+            reader = OpenCVFrameReader(
+                parse_video_source(str(video)),
+                source_id="legacy-smoke",
+                config=OpenCVReaderConfig(prefer_hardware_decode=False),
+            )
+            summary = run_replay(reader, detector, root / "legacy-smoke.jsonl", max_frames=1)
+            self.assertEqual(summary.frames_processed, 1)
+            self.assertEqual(summary.source_frames_decoded, 1)
 
 
 if __name__ == "__main__":

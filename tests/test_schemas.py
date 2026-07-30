@@ -17,6 +17,26 @@ class SchemaTests(unittest.TestCase):
                 height=1080,
             )
 
+    def test_frame_timing_metadata_must_be_non_negative(self) -> None:
+        with self.assertRaises(ValueError):
+            FramePacket(
+                source_id="drone-01",
+                frame_id=1,
+                captured_at=datetime.now(UTC),
+                width=1920,
+                height=1080,
+                source_pts_seconds=-0.1,
+            )
+        with self.assertRaises(ValueError):
+            FramePacket(
+                source_id="drone-01",
+                frame_id=1,
+                captured_at=datetime.now(UTC),
+                width=1920,
+                height=1080,
+                decode_duration_ms=float("nan"),
+            )
+
     def test_valid_detection_and_track(self) -> None:
         detection = Detection(
             bbox_xyxy=(1.0, 2.0, 12.0, 18.0),

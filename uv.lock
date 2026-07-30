@@ -1486,14 +1486,20 @@ legacy-detector = [
     { name = "tqdm" },
     { name = "ultralytics" },
 ]
+video = [
+    { name = "numpy" },
+    { name = "opencv-python" },
+]
 
 [package.metadata]
 requires-dist = [
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11" },
     { name = "numpy", marker = "extra == 'legacy-detector'", specifier = ">=1.24,<2.3" },
+    { name = "numpy", marker = "extra == 'video'", specifier = ">=1.24,<2.3" },
     { name = "onnx", marker = "extra == 'export'", specifier = ">=1.17,<=1.19.1" },
     { name = "onnxruntime", marker = "extra == 'export'", specifier = ">=1.20,<2" },
     { name = "opencv-python", marker = "extra == 'legacy-detector'", specifier = ">=4.8,<5" },
+    { name = "opencv-python", marker = "extra == 'video'", specifier = ">=4.8,<5" },
     { name = "pillow", marker = "extra == 'legacy-detector'", specifier = ">=9.5" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.2" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5" },
@@ -1505,7 +1511,7 @@ requires-dist = [
     { name = "tqdm", marker = "extra == 'legacy-detector'", specifier = ">=4.65" },
     { name = "ultralytics", marker = "extra == 'legacy-detector'", specifier = "==8.3.234" },
 ]
-provides-extras = ["legacy-detector", "export", "dev"]
+provides-extras = ["video", "legacy-detector", "export", "dev"]
 
 [[package]]
 name = "setuptools"

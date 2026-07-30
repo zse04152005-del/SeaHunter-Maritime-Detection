@@ -11,6 +11,7 @@ class VideoSourceTests(unittest.TestCase):
         source = parse_video_source("rtsp://camera.example/live")
         self.assertEqual(source.kind, SourceKind.RTSP)
         self.assertTrue(source.is_network)
+        self.assertTrue(source.is_live)
 
     def test_srt_source(self) -> None:
         source = parse_video_source("srt://127.0.0.1:9000?mode=listener")
@@ -27,6 +28,13 @@ class VideoSourceTests(unittest.TestCase):
     def test_unknown_scheme_is_rejected(self) -> None:
         with self.assertRaises(ValueError):
             parse_video_source("ftp://example.com/video.mp4")
+
+    def test_suggested_network_id_does_not_expose_credentials(self) -> None:
+        source = parse_video_source("rtsp://operator:secret@camera.example/live")
+        suggested = source.suggested_id()
+        self.assertNotIn("operator", suggested)
+        self.assertNotIn("secret", suggested)
+        self.assertTrue(suggested.startswith("rtsp-camera-example-"))
 
 
 if __name__ == "__main__":

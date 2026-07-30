@@ -10,7 +10,8 @@ The repository has completed the locally verifiable M0 work and has started **M1
 - Historical training and inference scripts live in `legacy/`.
 - Historical paper sources live in `docs/archive/`.
 - New system code is developed under `src/seahunter/`.
-- The M1 foundation includes framework-neutral one-frame inference and a bounded drop-oldest buffer for real-time freshness.
+- M1 now includes file/device/RTSP/SRT/HTTP ingestion, decode timestamps, live-source reconnection, a bounded
+  freshness-first worker, deterministic JSONL replay, and FPS/P50/P95/P99 performance summaries.
 - The complete execution order and acceptance gates are defined in [ROADMAP.md](ROADMAP.md).
 
 ## Repository layout
@@ -34,7 +35,7 @@ The target development Python is 3.10 or 3.11. Python 3.12 may be used for frame
 ```powershell
 uv venv --python 3.11
 .venv\Scripts\Activate.ps1
-uv pip install -e ".[dev]"
+uv pip install -e ".[dev,video]"
 python -m unittest discover -s tests -v
 python evaluation/inspect_baseline.py
 ```
@@ -44,6 +45,31 @@ Install the optional legacy detector stack only when running model tests:
 ```powershell
 uv pip install -e ".[legacy-detector]"
 ```
+
+## Video replay
+
+Offline replay processes every frame and keeps runtime timing outside the deterministic JSONL metadata:
+
+```powershell
+seahunter-video-replay .\samples\flight.mp4 `
+  --output .\outputs\flight.jsonl `
+  --device cpu
+```
+
+For a live source, enable the bounded latest-frame pipeline. Queue pressure drops stale frames instead of allowing
+latency and memory to grow without bound:
+
+```powershell
+seahunter-video-replay rtsp://camera.example/live `
+  --output .\outputs\live.jsonl `
+  --realtime `
+  --buffer-capacity 2 `
+  --device 0
+```
+
+Use `--max-reconnect-attempts -1` for an always-on service. The default finite retry budget is safer for CLI jobs.
+Hardware decoding is requested through the selected OpenCV backend when available, but NVDEC must still be verified
+on the target NVIDIA device before it is treated as an accepted deployment capability.
 
 ## Important licensing note
 

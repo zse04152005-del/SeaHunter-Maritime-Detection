@@ -18,7 +18,7 @@ jobs:
           python-version: "3.12"
           enable-cache: true
       - name: Install development environment
-        run: uv sync --extra dev
+        run: uv sync --extra dev --extra video
       - name: Lint
         run: uv run ruff check src tests training evaluation
       - name: Format check

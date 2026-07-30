@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
+from math import isfinite
 from typing import Any
 
 
@@ -50,6 +51,9 @@ class FramePacket:
     height: int
     payload: Any = field(default=None, repr=False, compare=False)
     dropped_before: int = 0
+    decoded_at: datetime | None = None
+    source_pts_seconds: float | None = None
+    decode_duration_ms: float | None = None
 
     def __post_init__(self) -> None:
         if not self.source_id.strip():
@@ -61,6 +65,16 @@ class FramePacket:
         if self.dropped_before < 0:
             raise ValueError("dropped_before must be non-negative")
         _validate_aware_timestamp(self.captured_at, "captured_at")
+        if self.decoded_at is not None:
+            _validate_aware_timestamp(self.decoded_at, "decoded_at")
+        if self.source_pts_seconds is not None and (
+            not isfinite(self.source_pts_seconds) or self.source_pts_seconds < 0
+        ):
+            raise ValueError("source_pts_seconds must be finite and non-negative")
+        if self.decode_duration_ms is not None and (
+            not isfinite(self.decode_duration_ms) or self.decode_duration_ms < 0
+        ):
+            raise ValueError("decode_duration_ms must be finite and non-negative")
 
 
 @dataclass(frozen=True, slots=True)
