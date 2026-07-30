@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from time import perf_counter
@@ -12,7 +12,7 @@ from typing import Protocol
 
 from seahunter.perception import Detector
 from seahunter.runtime.monitoring import RuntimeResourceMonitor
-from seahunter.schemas import FramePacket
+from seahunter.schemas import FramePacket, TelemetryPacket
 from seahunter.video import BufferClosed, FrameIngestWorker, ReaderStats, VideoSource
 
 from .results import FrameResult, FrameResultSink, frame_result_to_record
@@ -96,6 +96,7 @@ def run_replay(
     include_runtime_timings: bool = False,
     sinks: Sequence[FrameResultSink] = (),
     resource_monitor: RuntimeResourceMonitor | None = None,
+    telemetry_provider: Callable[[FramePacket], TelemetryPacket | None] | None = None,
 ) -> ReplaySummary:
     """Run detection over a source and write canonical JSONL frame records.
 
@@ -152,6 +153,7 @@ def run_replay(
                     detector_id=detector.detector_id,
                     dropped_before=dropped_before,
                     inference_duration_ms=inference_ms,
+                    telemetry=None if telemetry_provider is None else telemetry_provider(frame),
                 )
                 record = frame_result_to_record(result, include_runtime_timings=include_runtime_timings)
                 stream.write(json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":")))

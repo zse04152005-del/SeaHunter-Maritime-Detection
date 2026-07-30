@@ -10,5 +10,6 @@
 | 2026-07-30 | D-006 | Run tests/experiments in GitHub Actions when possible | Keep the local workstation for editing and static checks | Target hardware tasks require a dedicated runner |
 | 2026-07-30 | D-007 | Replace the legacy one-entry “ablation” script with a strict JSON experiment matrix | Freeze variants, seeds, NWD controls, and manifests before GPU allocation | Schema migration with backward-compatibility note |
 | 2026-07-30 | D-008 | Separate decoder build capability, actual source selection, and NVDEC target proof | Generic OpenCV hardware flags can silently fall back and cannot independently prove NVDEC | A dedicated runtime exposes stronger vendor-specific decoder evidence |
+| 2026-07-30 | D-009 | Use aligned IMU/gimbal rotation only as a gated GMC prior | Telemetry can rescue weak visual texture but cannot replace visual evidence or calibrated translation geometry | M3 calibration/time-sync results or real-sequence disagreement analysis |
 
 Architecture decisions with broader context remain under `docs/adr/`.

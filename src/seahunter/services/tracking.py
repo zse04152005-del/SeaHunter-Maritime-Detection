@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from typing import Protocol
 
 from seahunter.schemas import TrackState
-from seahunter.tracking import MultiObjectTracker
+from seahunter.tracking import MultiObjectTracker, TelemetryAwareTracker
 
 from .results import FrameResult
 
@@ -33,6 +33,8 @@ class TrackingSink:
     def write(self, result: FrameResult) -> None:
         if self._closed:
             raise RuntimeError("tracking sink is closed")
+        if result.telemetry is not None and isinstance(self.tracker, TelemetryAwareTracker):
+            self.tracker.push_telemetry(result.telemetry)
         states = tuple(self.tracker.update(result.frame, result.detections))
         self.latest_states = states
         for sink in self.sinks:

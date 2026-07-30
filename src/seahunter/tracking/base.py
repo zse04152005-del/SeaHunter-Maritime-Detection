@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
-from seahunter.schemas import Detection, FramePacket, TrackState
+from seahunter.schemas import Detection, FramePacket, TelemetryPacket, TrackState
 
 
 class MultiObjectTracker(Protocol):
@@ -20,3 +20,11 @@ class MultiObjectTracker(Protocol):
 
     def reset(self) -> None:
         """Clear all active identities and sequence state."""
+
+
+@runtime_checkable
+class TelemetryAwareTracker(Protocol):
+    """Optional tracker capability for timestamped IMU/gimbal packets."""
+
+    def push_telemetry(self, packet: TelemetryPacket) -> None:
+        """Submit one packet before advancing its aligned video frame."""

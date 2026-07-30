@@ -366,6 +366,10 @@ def _track_state_to_preview_record(state: TrackState) -> dict[str, object]:
                 "quality": round(state.global_motion_quality or 0.0, 6),
                 "applied": state.global_motion_applied,
                 "fallback_reason": state.global_motion_fallback_reason,
+                "source": state.global_motion_source,
+                "visual_quality": state.global_motion_visual_quality,
+                "prior_quality": state.global_motion_prior_quality,
+                "fusion_reason": state.global_motion_fusion_reason,
             }
         ),
     }

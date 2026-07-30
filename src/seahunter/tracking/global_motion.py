@@ -24,6 +24,10 @@ class GlobalMotionEstimate:
     inliers: int
     applied: bool
     fallback_reason: str | None = None
+    source: str = "visual"
+    visual_quality: float | None = None
+    prior_quality: float | None = None
+    fusion_reason: str | None = None
 
     def __post_init__(self) -> None:
         if len(self.affine_2x3) != 6 or not all(isfinite(value) for value in self.affine_2x3):
@@ -38,6 +42,13 @@ class GlobalMotionEstimate:
             raise ValueError("an applied global-motion estimate cannot have a fallback reason")
         if not self.applied and (self.fallback_reason is None or not self.fallback_reason.strip()):
             raise ValueError("a rejected global-motion estimate requires a fallback reason")
+        if not self.source.strip():
+            raise ValueError("global-motion source must not be empty")
+        for name, quality in (("visual_quality", self.visual_quality), ("prior_quality", self.prior_quality)):
+            if quality is not None and not 0.0 <= quality <= 1.0:
+                raise ValueError(f"{name} must be within [0, 1]")
+        if self.fusion_reason is not None and not self.fusion_reason.strip():
+            raise ValueError("fusion_reason must not be empty")
 
     @property
     def translation_xy(self) -> tuple[float, float]:
@@ -52,6 +63,10 @@ class GlobalMotionEstimate:
         feature_points: int = 0,
         tracked_points: int = 0,
         inliers: int = 0,
+        source: str = "visual",
+        visual_quality: float | None = None,
+        prior_quality: float | None = None,
+        fusion_reason: str | None = None,
     ) -> GlobalMotionEstimate:
         return cls(
             affine_2x3=IDENTITY_AFFINE,
@@ -61,6 +76,10 @@ class GlobalMotionEstimate:
             inliers=inliers,
             applied=False,
             fallback_reason=reason,
+            source=source,
+            visual_quality=visual_quality,
+            prior_quality=prior_quality,
+            fusion_reason=fusion_reason,
         )
 
 

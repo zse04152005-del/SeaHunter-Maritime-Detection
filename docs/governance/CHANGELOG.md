@@ -13,6 +13,8 @@
   validation path.
 - Added auditable OpenCV decoder build/selection reports and deterministic hardware-to-software fallback coverage;
   target-device NVDEC acceptance remains explicitly open.
+- Added bounded IMU/gimbal motion priors, visual/prior affine fusion, per-track fusion audit fields, and a
+  `FrameResult` telemetry integration seam without making absolute-position or real-data benefit claims.
 
 This log summarizes accepted engineering increments. Exact implementation and validation evidence remains in Git
 history and `docs/reports/`.

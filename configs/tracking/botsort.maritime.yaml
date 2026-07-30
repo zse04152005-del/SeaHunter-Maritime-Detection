@@ -34,9 +34,23 @@ global_motion:
   maximum_scale: 1.20
   maximum_rotation_degrees: 20.0
 
+# Disabled until camera focal length and telemetry/video alignment are calibrated
+# on the target platform. The implementation consumes bounded, timestamped
+# TelemetryPacket histories and never infers absolute target position here.
+telemetry_motion_prior:
+  enabled: false
+  focal_length_px: null
+  maximum_alignment_error_seconds: 0.10
+  minimum_quality: 0.50
+  maximum_angle_delta_degrees: 15.0
+  maximum_packets_per_source: 512
+  fusion:
+    telemetry_weight: 1.0
+    maximum_disagreement_ratio: 0.03
+
 outputs:
   mot_include_inferred: false
-  audit_jsonl_schema_version: 2
+  audit_jsonl_schema_version: 3
   track_trail_length: 30
 
 # Starting values only. Accept a real-data benefit only after paired no-GMC/GMC

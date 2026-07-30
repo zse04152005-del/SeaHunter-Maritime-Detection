@@ -111,7 +111,23 @@ class TelemetryPacket:
     quality: float = 1.0
 
     def __post_init__(self) -> None:
+        if not self.source_id.strip():
+            raise ValueError("source_id must not be empty")
         _validate_aware_timestamp(self.captured_at, "captured_at")
+        numeric_values = (
+            self.latitude_deg,
+            self.longitude_deg,
+            self.altitude_m,
+            self.platform_roll_deg,
+            self.platform_pitch_deg,
+            self.platform_yaw_deg,
+            self.gimbal_roll_deg,
+            self.gimbal_pitch_deg,
+            self.gimbal_yaw_deg,
+            self.quality,
+        )
+        if not all(isfinite(value) for value in numeric_values):
+            raise ValueError("telemetry values must be finite")
         if not -90.0 <= self.latitude_deg <= 90.0:
             raise ValueError("latitude_deg must be within [-90, 90]")
         if not -180.0 <= self.longitude_deg <= 180.0:
@@ -168,6 +184,10 @@ class TrackState:
     global_motion_quality: float | None = None
     global_motion_applied: bool = False
     global_motion_fallback_reason: str | None = None
+    global_motion_source: str | None = None
+    global_motion_visual_quality: float | None = None
+    global_motion_prior_quality: float | None = None
+    global_motion_fusion_reason: str | None = None
 
     def __post_init__(self) -> None:
         if self.track_id < 0 or self.frame_id < 0:
@@ -194,7 +214,14 @@ class TrackState:
         if self.observation is ObservationKind.INFERRED and self.lost_reason is None:
             raise ValueError("inferred track states must have a lost_reason")
         if self.global_motion_affine is None:
-            if self.global_motion_quality is not None or self.global_motion_applied:
+            if (
+                self.global_motion_quality is not None
+                or self.global_motion_applied
+                or self.global_motion_source is not None
+                or self.global_motion_visual_quality is not None
+                or self.global_motion_prior_quality is not None
+                or self.global_motion_fusion_reason is not None
+            ):
                 raise ValueError("global-motion quality/applied state requires affine coefficients")
         else:
             if len(self.global_motion_affine) != 6 or not all(isfinite(value) for value in self.global_motion_affine):
@@ -205,6 +232,16 @@ class TrackState:
             raise ValueError("applied global motion cannot have a fallback reason")
         if self.global_motion_fallback_reason is not None and not self.global_motion_fallback_reason.strip():
             raise ValueError("global_motion_fallback_reason must not be empty")
+        if self.global_motion_source is not None and not self.global_motion_source.strip():
+            raise ValueError("global_motion_source must not be empty")
+        for name, quality in (
+            ("global_motion_visual_quality", self.global_motion_visual_quality),
+            ("global_motion_prior_quality", self.global_motion_prior_quality),
+        ):
+            if quality is not None and not 0.0 <= quality <= 1.0:
+                raise ValueError(f"{name} must be within [0, 1]")
+        if self.global_motion_fusion_reason is not None and not self.global_motion_fusion_reason.strip():
+            raise ValueError("global_motion_fusion_reason must not be empty")
         _validate_aware_timestamp(self.captured_at, "captured_at")
 
 

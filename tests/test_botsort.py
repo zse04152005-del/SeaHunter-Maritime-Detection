@@ -109,7 +109,7 @@ class BoTSORTTrackerTests(unittest.TestCase):
             mot.close()
 
             rows = [json.loads(line) for line in (root / "tracks.jsonl").read_text(encoding="utf-8").splitlines()]
-            self.assertEqual(rows[0]["schema_version"], 2)
+            self.assertEqual(rows[0]["schema_version"], 3)
             self.assertEqual(rows[0]["global_motion"]["fallback_reason"], "no_previous_frame")
             self.assertTrue(rows[1]["global_motion"]["applied"])
             self.assertEqual(rows[1]["global_motion"]["affine_2x3"][2], 40.0)

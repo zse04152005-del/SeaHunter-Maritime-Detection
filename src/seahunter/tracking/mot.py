@@ -76,7 +76,7 @@ class TrackJsonlWriter:
         stream = self._ensure_stream()
         for state in sorted(states, key=lambda item: (item.frame_id, item.track_id)):
             record = {
-                "schema_version": 2,
+                "schema_version": 3,
                 "tracker_id": state.tracker_id,
                 "track_id": state.track_id,
                 "frame_id": state.frame_id,
@@ -102,6 +102,18 @@ class TrackJsonlWriter:
                         "quality": round(state.global_motion_quality or 0.0, 6),
                         "applied": state.global_motion_applied,
                         "fallback_reason": state.global_motion_fallback_reason,
+                        "source": state.global_motion_source,
+                        "visual_quality": (
+                            None
+                            if state.global_motion_visual_quality is None
+                            else round(state.global_motion_visual_quality, 6)
+                        ),
+                        "prior_quality": (
+                            None
+                            if state.global_motion_prior_quality is None
+                            else round(state.global_motion_prior_quality, 6)
+                        ),
+                        "fusion_reason": state.global_motion_fusion_reason,
                     }
                 ),
             }

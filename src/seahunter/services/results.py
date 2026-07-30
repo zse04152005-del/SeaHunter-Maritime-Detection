@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from math import isfinite
 from typing import Protocol
 
-from seahunter.schemas import Detection, FramePacket
+from seahunter.schemas import Detection, FramePacket, TelemetryPacket
 
 
 @dataclass(frozen=True, slots=True)
@@ -19,6 +19,7 @@ class FrameResult:
     detector_id: str
     dropped_before: int
     inference_duration_ms: float
+    telemetry: TelemetryPacket | None = None
 
     def __post_init__(self) -> None:
         if not self.detector_id.strip():
@@ -27,6 +28,8 @@ class FrameResult:
             raise ValueError("dropped_before must be non-negative")
         if not isfinite(self.inference_duration_ms) or self.inference_duration_ms < 0:
             raise ValueError("inference_duration_ms must be finite and non-negative")
+        if self.telemetry is not None and self.telemetry.source_id != self.frame.source_id:
+            raise ValueError("telemetry and frame source_id must match")
 
 
 class FrameResultSink(Protocol):

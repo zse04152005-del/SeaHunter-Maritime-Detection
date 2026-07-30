@@ -18,6 +18,7 @@ on:
           - m2-tracking
           - m2-evaluation
           - m2-gmc
+          - m2-motion-prior
           - all
 
 permissions:
@@ -207,4 +208,32 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: m2-gmc-reports
+          path: reports/
+
+  m2-motion-prior:
+    if: github.event_name == 'push' || inputs.suite == 'm2-motion-prior' || inputs.suite == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install telemetry motion environment
+        run: uv sync --extra dev --extra tracking
+      - name: Run telemetry prior and motion-fusion validation
+        run: |
+          mkdir -p reports
+          uv run pytest \
+            tests/test_telemetry_motion.py \
+            tests/test_botsort.py \
+            tests/test_schemas.py \
+            tests/test_tracking_outputs.py \
+            --junitxml=reports/m2-motion-prior.xml
+      - name: Upload telemetry motion reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2-motion-prior-reports
           path: reports/
