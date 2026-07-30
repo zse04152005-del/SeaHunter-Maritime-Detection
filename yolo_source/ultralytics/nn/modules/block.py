@@ -1981,16 +1981,20 @@ class SPDConv(nn.Module):
         self.bn = nn.BatchNorm2d(c2)
         self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
 
+    @staticmethod
+    def _space_to_depth(x):
+        """Rearrange 2x2 spatial neighborhoods into channels with explicit shape validation."""
+        if x.shape[-2] % 2 or x.shape[-1] % 2:
+            raise ValueError(f"SPDConv requires even spatial dimensions, got {tuple(x.shape[-2:])}")
+        return torch.cat([x[..., ::2, ::2], x[..., 1::2, ::2], x[..., ::2, 1::2], x[..., 1::2, 1::2]], 1)
+
     def forward(self, x):
-        # 核心逻辑：切片拼接 (Space-to-Depth)
-        x = torch.cat([x[..., ::2, ::2], x[..., 1::2, ::2], x[..., ::2, 1::2], x[..., 1::2, 1::2]], 1)
-        """Apply convolution, batch normalization and activation to input tensor."""
-        return self.act(self.bn(self.conv(x)))
+        """Apply space-to-depth, convolution, batch normalization, and activation."""
+        return self.act(self.bn(self.conv(self._space_to_depth(x))))
 
     def forward_fuse(self, x):
-        """Perform transposed convolution of 2D data."""
-        x = torch.cat([x[..., ::2, ::2], x[..., 1::2, ::2], x[..., ::2, 1::2], x[..., 1::2, 1::2]], 1)
-        return self.act(self.conv(x))
+        """Apply the fused convolution path after space-to-depth."""
+        return self.act(self.conv(self._space_to_depth(x)))
 
 
 # === 2. EMA (Attention - GroupNorm Optimized) ===
@@ -1998,8 +2002,11 @@ class SPDConv(nn.Module):
 class EMA(nn.Module):
     def __init__(self, c1, c2, factor=32):
         super(EMA, self).__init__()
+        if c1 != c2:
+            raise ValueError(f"EMA preserves channels and requires c1 == c2, got {c1} and {c2}")
+        if c1 % factor:
+            raise ValueError(f"EMA requires c1 divisible by factor, got c1={c1}, factor={factor}")
         self.groups = factor
-        assert c1 // self.groups > 0
         self.softmax = nn.Softmax(-1)
         self.agp = nn.AdaptiveAvgPool2d((1, 1))
         self.pool_h = nn.AdaptiveAvgPool2d((None, 1))

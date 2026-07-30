@@ -1,0 +1,12 @@
+
+path: datasets/SeaDronesSee
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: swimmer
+  1: boat
+  2: jet_ski
+  3: life_saving_appliance
+  4: buoy

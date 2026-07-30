@@ -1,0 +1,31 @@
+name: ci
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  framework-neutral-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install development environment
+        run: uv sync --extra dev
+      - name: Lint
+        run: uv run ruff check src tests training evaluation
+      - name: Format check
+        run: uv run ruff format --check src tests training evaluation
+      - name: Type check
+        run: uv run mypy src/seahunter
+      - name: Unit tests
+        run: uv run pytest
+      - name: Static baseline audit
+        run: uv run python evaluation/inspect_baseline.py

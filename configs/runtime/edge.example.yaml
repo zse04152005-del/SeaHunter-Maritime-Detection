@@ -1,0 +1,25 @@
+source:
+  id: drone-01
+  uri: rtsp://127.0.0.1:8554/live
+  queue_size: 4
+  drop_policy: oldest
+
+detector:
+  model: weights/seahunter_best.pt
+  backend: pytorch
+  input_size: 1024
+  confidence: 0.25
+  iou: 0.70
+
+tracking:
+  algorithm: bytetrack
+  config: configs/tracking/bytetrack.maritime.yaml
+
+telemetry:
+  enabled: false
+  protocol: mavlink
+
+events:
+  enabled: true
+  evidence_pre_seconds: 10
+  evidence_post_seconds: 10

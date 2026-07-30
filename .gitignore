@@ -18,6 +18,16 @@ venv/
 env/
 ENV/
 .venv
+.venv/
+.uv-cache/
+.uv-python/
+.runtime/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
 
 # Jupyter Notebook
 .ipynb_checkpoints
@@ -45,8 +55,8 @@ Desktop.ini
 # ===================================
 
 # Datasets (too large to upload)
-datasets/
-data/
+/datasets/
+/data/
 *.zip
 *.tar.gz
 *.rar
@@ -55,20 +65,30 @@ data/
 runs/
 wandb/
 logs/
+mlruns/
+artifacts/
+recordings/
+evidence/
 
 # Pretrained Weights (download separately)
 *.pt
 *.pth
 *.onnx
+*.engine
+*.plan
+*.trt
 *.tflite
 *.pb
-!yolov8s.pt  # Keep baseline pretrained model
-!weights/seahunter_best.pt  # Keep SeaHunter final model
+# Keep explicitly registered baseline weights during M0.
+!yolov8s.pt
+!weights/seahunter_best.pt
 
 # Temporary Files
 temp/
 tmp/
 *.tmp
+*.jsonl
+*.parquet
 
 # Paper & Visualizations (optional, can be included)
 # paper_visualizations/*.png

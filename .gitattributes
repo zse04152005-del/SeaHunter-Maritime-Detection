@@ -1,0 +1,8 @@
+* text=auto
+
+*.pt binary
+*.onnx binary
+*.engine binary
+*.png binary
+*.jpg binary
+*.jpeg binary
