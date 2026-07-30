@@ -1,6 +1,9 @@
 name: cloud-validation
 
 on:
+  push:
+    branches: ["feature/**"]
+    paths: [".github/workflows/cloud-validation.yml"]
   workflow_dispatch:
     inputs:
       suite:
@@ -23,7 +26,7 @@ concurrency:
 
 jobs:
   legacy-detector:
-    if: inputs.suite == 'legacy-detector' || inputs.suite == 'all'
+    if: github.event_name == 'push' || inputs.suite == 'legacy-detector' || inputs.suite == 'all'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -49,7 +52,7 @@ jobs:
           path: reports/
 
   m1-replay:
-    if: inputs.suite == 'm1-replay' || inputs.suite == 'all'
+    if: github.event_name == 'push' || inputs.suite == 'm1-replay' || inputs.suite == 'all'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -77,7 +80,7 @@ jobs:
           path: reports/
 
   m2-tracking:
-    if: inputs.suite == 'm2-tracking' || inputs.suite == 'all'
+    if: github.event_name == 'push' || inputs.suite == 'm2-tracking' || inputs.suite == 'all'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
