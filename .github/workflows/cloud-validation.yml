@@ -15,6 +15,7 @@ on:
           - legacy-detector
           - m1-replay
           - m2-tracking
+          - m2-evaluation
           - all
 
 permissions:
@@ -106,4 +107,37 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: m2-tracking-reports
+          path: reports/
+
+  m2-evaluation:
+    if: github.event_name == 'push' || inputs.suite == 'm2-evaluation' || inputs.suite == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install MOT evaluation environment
+        run: uv sync --extra dev --extra evaluation
+      - name: Run MOT evaluator tests
+        run: |
+          mkdir -p reports
+          uv run pytest tests/test_mot_evaluation.py \
+            --junitxml=reports/m2-evaluation.xml
+      - name: Generate synthetic maritime MOT report
+        run: |
+          uv run seahunter-mot-evaluate \
+            --ground-truth tests/fixtures/mot/synthetic-maritime-gt.txt \
+            --predictions tests/fixtures/mot/synthetic-maritime-pred.txt \
+            --sequence-name synthetic-maritime \
+            --output reports/synthetic-maritime.metrics.json \
+            --errors-output reports/synthetic-maritime.errors.json \
+            --artifacts-dir reports/synthetic-maritime.trackeval
+      - name: Upload MOT evaluation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2-evaluation-reports
           path: reports/

@@ -171,6 +171,9 @@ JSONL 输出及 CLI 已完成，并通过 GitHub Actions 的 Python 3.10/3.12 �
 集成及原始权重 CPU 回归。Track ID、生命周期、有限轨迹线以及 `observed`/`inferred` 差异化视频与
 WebSocket 可视化也已通过云端验证；下一增量进入 HOTA、IDF1、ID Switch 等 MOT 指标评测。
 
+MOT 指标评测代码已接入固定提交的官方 TrackEval，实现 class-agnostic MOTChallenge 适配、HOTA/CLEAR/
+Identity 指标归一化报告及逐帧错误索引；在 GitHub Actions 数值验证通过前，组合任务保持未勾选。
+
 任务：
 
 - [x] 建立 ByteTrack 基线；

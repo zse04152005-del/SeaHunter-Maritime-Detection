@@ -46,7 +46,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
       - name: Install test environment
-        run: uv sync --extra dev --extra video --extra edge --extra parquet --extra tracking
+        run: uv sync --extra dev --extra video --extra edge --extra parquet --extra tracking --extra evaluation
       - name: Run unit and integration tests
         run: |
           mkdir -p reports

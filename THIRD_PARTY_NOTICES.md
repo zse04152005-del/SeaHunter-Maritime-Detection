@@ -23,6 +23,17 @@ The repository's root MIT license applies to original SeaHunter-VIS code and doe
 - Project use: training and evaluation only; dataset files are not included in this repository
 - Action required: verify and record the dataset release terms before sharing derived datasets or annotations
 
+## TrackEval
+
+- Component: optional TrackEval Python dependency pinned to commit
+  `12c8791b303e0a0b50f753af204249e622d0281a`
+- Upstream: <https://github.com/JonathonLuiten/TrackEval>
+- Declared license: MIT
+- Project use: standard HOTA, DetA, AssA, CLEAR MOT, and identity metric evaluation
+- Local modifications: none; SeaHunter-VIS prepares normalized class-agnostic MOTChallenge inputs, restores the
+  deprecated NumPy scalar aliases required by this pinned revision at the import boundary, and parses the returned
+  standard metric dictionaries
+
 ## Model weights
 
 `weights/seahunter_best.pt` was produced by the original SeaHunter project using the modified Ultralytics code. Distribution of weights must be reviewed together with the training framework, source dataset terms, and intended product use.

@@ -42,7 +42,7 @@ The target development Python is 3.10 or 3.11. Python 3.12 may be used for frame
 ```powershell
 uv venv --python 3.11
 .venv\Scripts\Activate.ps1
-uv pip install -e ".[dev,video,edge,parquet,tracking]"
+uv pip install -e ".[dev,video,edge,parquet,tracking,evaluation]"
 python -m unittest discover -s tests -v
 python evaluation/inspect_baseline.py
 ```
@@ -54,7 +54,8 @@ uv pip install -e ".[legacy-detector]"
 ```
 
 The authoritative test matrix runs in GitHub Actions on Python 3.10 and 3.12. The manual `cloud-validation`
-workflow provides focused `legacy-detector`, `m1-replay`, `m2-tracking`, and `all` suites with JUnit artifacts.
+workflow provides focused `legacy-detector`, `m1-replay`, `m2-tracking`, `m2-evaluation`, and `all` suites with
+JUnit and metric artifacts.
 
 ## Video replay
 
@@ -124,6 +125,29 @@ When tracking is enabled, annotated video and WebSocket JPEG preview switch from
 IDs and bounded trails. Observed states use identity colors and solid boxes; motion-model predictions use orange
 dashed boxes and trail segments. Preview metadata includes the same lifecycle and observation fields for operator UI
 and audit consumers.
+
+## MOT evaluation
+
+Evaluate one MOTChallenge sequence with the standard TrackEval HOTA, CLEAR MOT, and identity metrics:
+
+```powershell
+seahunter-mot-evaluate `
+  --ground-truth .\datasets\mot\flight-01\gt.txt `
+  --predictions .\outputs\flight-01-mot.txt `
+  --sequence-name flight-01 `
+  --output .\reports\flight-01.metrics.json `
+  --errors-output .\reports\flight-01.errors.json `
+  --artifacts-dir .\reports\flight-01.trackeval
+```
+
+The evaluator validates positive one-based frame/track IDs, finite positive boxes, and unique identities per frame.
+It normalizes maritime classes to a class-agnostic TrackEval sequence and reports HOTA, DetA, AssA, LocA, MOTA,
+MOTP, recall, precision, IDF1, ID switches, fragmentation, false positives, and false negatives. The separate error
+index identifies the exact frames and identities involved in misses, false positives, ID switches, and fragmented
+recoveries for offline video review.
+
+TrackEval is pinned to an exact official MIT-licensed commit. Dataset-level numbers are not accepted until ground
+truth and predictions come from a leakage-free video split with documented ignore-region and visibility policy.
 
 ## Important licensing note
 

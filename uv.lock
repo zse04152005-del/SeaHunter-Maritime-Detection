@@ -1724,6 +1724,13 @@ edge = [
     { name = "psutil" },
     { name = "uvicorn", extra = ["standard"] },
 ]
+evaluation = [
+    { name = "numpy" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "trackeval" },
+]
 export = [
     { name = "onnx" },
     { name = "onnxruntime", version = "1.24.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -1761,6 +1768,7 @@ requires-dist = [
     { name = "fastapi", marker = "extra == 'edge'", specifier = ">=0.115,<1" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27,<1" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11" },
+    { name = "numpy", marker = "extra == 'evaluation'", specifier = ">=1.24,<2.3" },
     { name = "numpy", marker = "extra == 'legacy-detector'", specifier = ">=1.24,<2.3" },
     { name = "numpy", marker = "extra == 'tracking'", specifier = ">=1.24,<2.3" },
     { name = "numpy", marker = "extra == 'video'", specifier = ">=1.24,<2.3" },
@@ -1775,15 +1783,17 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5" },
     { name = "pyyaml", marker = "extra == 'legacy-detector'", specifier = ">=6" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
+    { name = "scipy", marker = "extra == 'evaluation'", specifier = ">=1.10,<2" },
     { name = "scipy", marker = "extra == 'legacy-detector'", specifier = ">=1.10" },
     { name = "scipy", marker = "extra == 'tracking'", specifier = ">=1.10,<2" },
     { name = "torch", marker = "extra == 'legacy-detector'", specifier = ">=2.2" },
     { name = "torchvision", marker = "extra == 'legacy-detector'", specifier = ">=0.17" },
     { name = "tqdm", marker = "extra == 'legacy-detector'", specifier = ">=4.65" },
+    { name = "trackeval", marker = "extra == 'evaluation'", git = "https://github.com/JonathonLuiten/TrackEval.git?rev=12c8791b303e0a0b50f753af204249e622d0281a" },
     { name = "ultralytics", marker = "extra == 'legacy-detector'", specifier = "==8.3.234" },
     { name = "uvicorn", extras = ["standard"], marker = "extra == 'edge'", specifier = ">=0.32,<1" },
 ]
-provides-extras = ["video", "edge", "parquet", "tracking", "legacy-detector", "export", "dev"]
+provides-extras = ["video", "edge", "parquet", "tracking", "evaluation", "legacy-detector", "export", "dev"]
 
 [[package]]
 name = "setuptools"
@@ -1925,6 +1935,17 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/21/3b/6c24bec5be5e743ffd99576daa5cc077722fc7d5bbc00bd133fa0c698dc6/tqdm-4.70.0.tar.gz", hash = "sha256:55b0b0dbd97462d06ebee91e4dac24ed4d4702be82b24f07e6c1d27e08cea220", size = 795438, upload-time = "2026-07-27T11:33:15.271Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f9/1c/01bfd571a64e7f270e6bab5e33777debe0edc56759233ce84f27dec92d14/tqdm-4.70.0-py3-none-any.whl", hash = "sha256:7f585706bfddbdebf89daac705b2dfcc16890130727d3197ca62c732b4310953", size = 80184, upload-time = "2026-07-27T11:33:13.167Z" },
+]
+
+[[package]]
+name = "trackeval"
+version = "1.0.dev1"
+source = { git = "https://github.com/JonathonLuiten/TrackEval.git?rev=12c8791b303e0a0b50f753af204249e622d0281a#12c8791b303e0a0b50f753af204249e622d0281a" }
+dependencies = [
+    { name = "numpy" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
 
 [[package]]
