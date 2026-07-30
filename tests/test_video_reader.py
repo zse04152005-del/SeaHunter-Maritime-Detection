@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
@@ -91,7 +91,7 @@ class VideoReaderTests(unittest.TestCase):
             reader = OpenCVFrameReader(
                 parse_video_source(str(path)),
                 capture_factory=factory_from([capture]),
-                utc_clock=lambda: datetime(2026, 7, 30, tzinfo=UTC),
+                utc_clock=lambda: datetime(2026, 7, 30, tzinfo=timezone.utc),
             )
 
             first = reader.read()
@@ -103,7 +103,7 @@ class VideoReaderTests(unittest.TestCase):
             assert first is not None and second is not None
             self.assertEqual(first.source_pts_seconds, 0.0)
             self.assertAlmostEqual(second.source_pts_seconds or 0.0, 0.04)
-            self.assertEqual(first.captured_at, datetime(1970, 1, 1, tzinfo=UTC))
+            self.assertEqual(first.captured_at, datetime(1970, 1, 1, tzinfo=timezone.utc))
             self.assertEqual((first.width, first.height), (64, 48))
             self.assertIsNone(end)
             self.assertEqual(reader.stats().frames_decoded, 2)

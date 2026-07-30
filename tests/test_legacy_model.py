@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import unittest
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -72,7 +72,7 @@ class LegacyModelTests(unittest.TestCase):
         frame = FramePacket(
             source_id="smoke",
             frame_id=0,
-            captured_at=datetime.now(UTC),
+            captured_at=datetime.now(timezone.utc),
             width=256,
             height=256,
             payload=self.np.zeros((256, 256, 3), dtype=self.np.uint8),

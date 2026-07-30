@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import unittest
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from seahunter.schemas import FramePacket
 from seahunter.video import BufferClosed, FrameIngestWorker, IngestionFailed, parse_video_source
@@ -11,7 +11,7 @@ def make_frame(frame_id: int) -> FramePacket:
     return FramePacket(
         source_id="test-source",
         frame_id=frame_id,
-        captured_at=datetime.now(UTC),
+        captured_at=datetime.now(timezone.utc),
         width=64,
         height=48,
         payload=object(),

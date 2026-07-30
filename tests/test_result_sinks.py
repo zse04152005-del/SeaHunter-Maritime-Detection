@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import unittest
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -23,7 +23,7 @@ def make_result(frame_id: int = 0) -> FrameResult:
     frame = FramePacket(
         source_id="camera-01",
         frame_id=frame_id,
-        captured_at=datetime(2026, 7, 30, tzinfo=UTC),
+        captured_at=datetime(2026, 7, 30, tzinfo=timezone.utc),
         width=96,
         height=64,
         payload=np.zeros((64, 96, 3), dtype=np.uint8),

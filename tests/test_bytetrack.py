@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import unittest
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from seahunter.schemas import (
     Detection,
@@ -17,7 +17,7 @@ def frame(frame_id: int, *, source_id: str = "flight-01") -> FramePacket:
     return FramePacket(
         source_id=source_id,
         frame_id=frame_id,
-        captured_at=datetime(2026, 7, 30, tzinfo=UTC) + timedelta(seconds=frame_id / 10),
+        captured_at=datetime(2026, 7, 30, tzinfo=timezone.utc) + timedelta(seconds=frame_id / 10),
         width=640,
         height=360,
     )

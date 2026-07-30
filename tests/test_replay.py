@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import unittest
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -15,13 +15,13 @@ from seahunter.video import ReaderStats, parse_video_source
 class FakeReader:
     def __init__(self, frame_count: int) -> None:
         self.source = parse_video_source("flight.mp4")
-        epoch = datetime(1970, 1, 1, tzinfo=UTC)
+        epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
         self._frames = [
             FramePacket(
                 source_id="flight-01",
                 frame_id=index,
                 captured_at=epoch + timedelta(seconds=index / 10),
-                decoded_at=datetime(2026, 7, 30, tzinfo=UTC),
+                decoded_at=datetime(2026, 7, 30, tzinfo=timezone.utc),
                 source_pts_seconds=index / 10,
                 decode_duration_ms=float(index + 1),
                 width=64,

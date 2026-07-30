@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import unittest
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -16,7 +16,7 @@ def result(frame_id: int, detections: tuple[Detection, ...]) -> FrameResult:
         frame=FramePacket(
             source_id="flight-01",
             frame_id=frame_id,
-            captured_at=datetime(2026, 7, 30, tzinfo=UTC),
+            captured_at=datetime(2026, 7, 30, tzinfo=timezone.utc),
             width=640,
             height=360,
         ),

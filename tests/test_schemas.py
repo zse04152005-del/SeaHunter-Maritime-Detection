@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import unittest
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from seahunter.schemas import (
     Detection,
@@ -29,7 +29,7 @@ class SchemaTests(unittest.TestCase):
             FramePacket(
                 source_id="drone-01",
                 frame_id=1,
-                captured_at=datetime.now(UTC),
+                captured_at=datetime.now(timezone.utc),
                 width=1920,
                 height=1080,
                 source_pts_seconds=-0.1,
@@ -38,7 +38,7 @@ class SchemaTests(unittest.TestCase):
             FramePacket(
                 source_id="drone-01",
                 frame_id=1,
-                captured_at=datetime.now(UTC),
+                captured_at=datetime.now(timezone.utc),
                 width=1920,
                 height=1080,
                 decode_duration_ms=float("nan"),
@@ -55,7 +55,7 @@ class SchemaTests(unittest.TestCase):
         track = TrackState(
             track_id=7,
             frame_id=12,
-            captured_at=datetime.now(UTC),
+            captured_at=datetime.now(timezone.utc),
             bbox_xyxy=detection.bbox_xyxy,
             class_id=detection.class_id,
             confidence=detection.confidence,
@@ -81,7 +81,7 @@ class SchemaTests(unittest.TestCase):
             TrackState(
                 track_id=1,
                 frame_id=1,
-                captured_at=datetime.now(UTC),
+                captured_at=datetime.now(timezone.utc),
                 bbox_xyxy=(0.0, 0.0, 10.0, 10.0),
                 class_id=0,
                 confidence=0.8,
@@ -94,7 +94,7 @@ class SchemaTests(unittest.TestCase):
             TrackState(
                 track_id=1,
                 frame_id=1,
-                captured_at=datetime.now(UTC),
+                captured_at=datetime.now(timezone.utc),
                 bbox_xyxy=(0.0, 0.0, 10.0, 10.0),
                 class_id=0,
                 confidence=0.8,
