@@ -14,10 +14,14 @@ frame_rate: 30.0
 inferred_confidence_decay: 0.90
 class_aware: true
 emit_lost_predictions: false
+motion_gating_enabled: true
+# Chi-square 99% quantile for four measurement dimensions (cx, cy, w, h).
+motion_gate_threshold: 13.276704
 
 outputs:
   mot_include_inferred: false
   audit_jsonl: true
+  audit_jsonl_schema_version: 4
   track_trail_length: 30
 
 # Starting values only: calibrate by target size, weather, camera motion, and source FPS

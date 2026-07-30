@@ -15,6 +15,8 @@
   target-device NVDEC acceptance remains explicitly open.
 - Added bounded IMU/gimbal motion priors, visual/prior affine fusion, per-track fusion audit fields, and a
   `FrameResult` telemetry integration seam without making absolute-position or real-data benefit claims.
+- Added pre-assignment Kalman motion gating, high/low/new association audit fields and counters, schema 4 migration
+  guidance, and a focused cloud-validation job.
 
 This log summarizes accepted engineering increments. Exact implementation and validation evidence remains in Git
 history and `docs/reports/`.

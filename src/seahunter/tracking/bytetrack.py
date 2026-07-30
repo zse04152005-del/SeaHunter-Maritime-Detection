@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 from collections.abc import Sequence
 from dataclasses import dataclass
+from math import isfinite
 from typing import Any
 
 from seahunter.schemas import (
@@ -34,6 +35,8 @@ class ByteTrackConfig:
     inferred_confidence_decay: float = 0.9
     class_aware: bool = True
     emit_lost_predictions: bool = False
+    motion_gating_enabled: bool = True
+    motion_gate_threshold: float = 13.276704
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.low_confidence_threshold <= self.high_confidence_threshold <= 1.0:
@@ -52,6 +55,8 @@ class ByteTrackConfig:
             raise ValueError("frame_rate must be positive")
         if not 0.0 <= self.inferred_confidence_decay <= 1.0:
             raise ValueError("inferred_confidence_decay must be within [0, 1]")
+        if not isfinite(self.motion_gate_threshold) or self.motion_gate_threshold <= 0:
+            raise ValueError("motion_gate_threshold must be finite and positive")
 
 
 @dataclass(slots=True)
@@ -66,7 +71,20 @@ class _Track:
     hits: int
     time_since_update: int
     association_score: float | None
+    association_stage: str | None
+    motion_gate_distance: float | None
+    appearance_score: float | None
+    reid_eligible: bool | None
+    reid_bypass_reason: str | None
     lost_reason: TrackLossReason | None
+
+
+@dataclass(frozen=True, slots=True)
+class _AssociationMatch:
+    track_index: int
+    detection_index: int
+    iou: float
+    motion_distance: float | None
 
 
 class ByteTracker:
@@ -91,7 +109,11 @@ class ByteTracker:
             f":decay={self.config.inferred_confidence_decay:g}"
             f":class={int(self.config.class_aware)}"
             f":emit_lost={int(self.config.emit_lost_predictions)}"
+            f":motion_gate={int(self.config.motion_gating_enabled)}/{self.config.motion_gate_threshold:g}"
         )
+        self._association_stage_counts: dict[str, int] = {}
+        self._motion_pairs_evaluated = 0
+        self._motion_pairs_gated = 0
 
     @property
     def tracker_id(self) -> str:
@@ -110,6 +132,11 @@ class ByteTracker:
             track.age_frames += delta_frames
             track.time_since_update += delta_frames
             track.association_score = None
+            track.association_stage = None
+            track.motion_gate_distance = None
+            track.appearance_score = None
+            track.reid_eligible = None
+            track.reid_bypass_reason = None
 
         self._after_prediction(frame, detections)
 
@@ -131,9 +158,15 @@ class ByteTracker:
         )
 
         observed_indices: set[int] = set()
-        for track_index, detection_index, score in first_matches:
-            self._update_track(self._tracks[track_index], high_detections[detection_index], score)
-            observed_indices.add(track_index)
+        for match in first_matches:
+            self._update_track(
+                self._tracks[match.track_index],
+                high_detections[match.detection_index],
+                match.iou,
+                stage="high",
+                motion_distance=match.motion_distance,
+            )
+            observed_indices.add(match.track_index)
 
         second_candidates = [
             index for index in unmatched_tracks if self._tracks[index].lifecycle is TrackLifecycle.CONFIRMED
@@ -143,9 +176,15 @@ class ByteTracker:
             low_detections,
             self.config.second_match_iou_threshold,
         )
-        for track_index, detection_index, score in second_matches:
-            self._update_track(self._tracks[track_index], low_detections[detection_index], score)
-            observed_indices.add(track_index)
+        for match in second_matches:
+            self._update_track(
+                self._tracks[match.track_index],
+                low_detections[match.detection_index],
+                match.iou,
+                stage="low",
+                motion_distance=match.motion_distance,
+            )
+            observed_indices.add(match.track_index)
 
         second_candidate_set = set(second_candidates)
         remaining_unmatched = [index for index in unmatched_tracks if index not in second_candidate_set]
@@ -165,6 +204,7 @@ class ByteTracker:
                 continue
             track = self._activate_track(detection)
             self._tracks.append(track)
+            self._association_stage_counts["new"] = self._association_stage_counts.get("new", 0) + 1
             observed_indices.add(len(self._tracks) - 1)
 
         for track in self._tracks:
@@ -189,6 +229,23 @@ class ByteTracker:
         self._next_track_id = 1
         self._last_frame_id = None
         self._source_id = None
+        self._association_stage_counts.clear()
+        self._motion_pairs_evaluated = 0
+        self._motion_pairs_gated = 0
+
+    def association_summary(self) -> dict[str, object]:
+        """Return deterministic hierarchical-association diagnostics."""
+
+        return {
+            "stage_matches": dict(sorted(self._association_stage_counts.items())),
+            "motion_pairs_evaluated": self._motion_pairs_evaluated,
+            "motion_pairs_gated": self._motion_pairs_gated,
+            "motion_gate_rate": (
+                0.0
+                if self._motion_pairs_evaluated == 0
+                else round(self._motion_pairs_gated / self._motion_pairs_evaluated, 6)
+            ),
+        }
 
     def _validate_frame(self, frame: FramePacket) -> int:
         if self._source_id is not None and frame.source_id != self._source_id:
@@ -214,6 +271,11 @@ class ByteTracker:
             hits=hits,
             time_since_update=0,
             association_score=1.0,
+            association_stage="new",
+            motion_gate_distance=None,
+            appearance_score=None,
+            reid_eligible=None,
+            reid_bypass_reason=None,
             lost_reason=None,
         )
         self._next_track_id += 1
@@ -224,7 +286,15 @@ class ByteTracker:
 
         del frame, detections
 
-    def _update_track(self, track: _Track, detection: Detection, score: float) -> None:
+    def _update_track(
+        self,
+        track: _Track,
+        detection: Detection,
+        score: float,
+        *,
+        stage: str,
+        motion_distance: float | None,
+    ) -> None:
         track.mean, track.covariance = self._kalman.update(
             track.mean,
             track.covariance,
@@ -235,6 +305,9 @@ class ByteTracker:
         track.hits += 1
         track.time_since_update = 0
         track.association_score = score
+        track.association_stage = stage
+        track.motion_gate_distance = motion_distance
+        self._association_stage_counts[stage] = self._association_stage_counts.get(stage, 0) + 1
         track.lost_reason = None
         if track.hits >= self.config.minimum_confirmed_hits:
             track.lifecycle = TrackLifecycle.CONFIRMED
@@ -244,7 +317,7 @@ class ByteTracker:
         track_indices: Sequence[int],
         detections: Sequence[Detection],
         minimum_iou: float,
-    ) -> tuple[list[tuple[int, int, float]], list[int], list[int]]:
+    ) -> tuple[list[_AssociationMatch], list[int], list[int]]:
         if not track_indices or not detections:
             return [], list(track_indices), list(range(len(detections)))
 
@@ -254,24 +327,47 @@ class ByteTracker:
         except ModuleNotFoundError as exc:
             raise RuntimeError("ByteTrack requires the 'tracking' project extra") from exc
 
+        invalid_cost = 1e6
+        costs = np.full((len(track_indices), len(detections)), invalid_cost, dtype=float)
         scores = np.full((len(track_indices), len(detections)), -1.0, dtype=float)
+        motion_distances = np.full((len(track_indices), len(detections)), np.nan, dtype=float)
         for row, track_index in enumerate(track_indices):
             track = self._tracks[track_index]
             track_bbox = self._kalman.to_xyxy(track.mean)
             for column, detection in enumerate(detections):
                 if self.config.class_aware and track.class_id != detection.class_id:
                     continue
-                scores[row, column] = _bbox_iou(track_bbox, detection.bbox_xyxy)
+                motion_distance: float | None = None
+                if self.config.motion_gating_enabled:
+                    self._motion_pairs_evaluated += 1
+                    motion_distance = self._kalman.gating_distance(track.mean, track.covariance, detection.bbox_xyxy)
+                    motion_distances[row, column] = motion_distance
+                    if motion_distance > self.config.motion_gate_threshold:
+                        self._motion_pairs_gated += 1
+                        continue
+                score = _bbox_iou(track_bbox, detection.bbox_xyxy)
+                scores[row, column] = score
+                if score >= minimum_iou:
+                    costs[row, column] = 1.0 - score
 
-        row_indices, column_indices = optimize.linear_sum_assignment(1.0 - scores)
-        matches: list[tuple[int, int, float]] = []
+        row_indices, column_indices = optimize.linear_sum_assignment(costs)
+        matches: list[_AssociationMatch] = []
         matched_rows: set[int] = set()
         matched_columns: set[int] = set()
         for row, column in zip(row_indices.tolist(), column_indices.tolist(), strict=True):
             score = float(scores[row, column])
-            if score < minimum_iou:
+            if costs[row, column] >= invalid_cost:
                 continue
-            matches.append((track_indices[row], column, score))
+            raw_motion_distance = float(motion_distances[row, column])
+            motion_distance = raw_motion_distance if np.isfinite(raw_motion_distance) else None
+            matches.append(
+                _AssociationMatch(
+                    track_index=track_indices[row],
+                    detection_index=column,
+                    iou=score,
+                    motion_distance=motion_distance,
+                )
+            )
             matched_rows.add(row)
             matched_columns.add(column)
 
@@ -307,6 +403,11 @@ class ByteTracker:
             age_frames=track.age_frames,
             time_since_update=track.time_since_update,
             association_score=track.association_score,
+            association_stage=track.association_stage,
+            motion_gate_distance=track.motion_gate_distance,
+            appearance_score=track.appearance_score,
+            reid_eligible=track.reid_eligible,
+            reid_bypass_reason=track.reid_bypass_reason,
             lost_reason=track.lost_reason,
         )
 

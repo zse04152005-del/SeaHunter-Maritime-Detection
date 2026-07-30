@@ -19,6 +19,7 @@ on:
           - m2-evaluation
           - m2-gmc
           - m2-motion-prior
+          - m2-association
           - all
 
 permissions:
@@ -236,4 +237,32 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: m2-motion-prior-reports
+          path: reports/
+
+  m2-association:
+    if: github.event_name == 'push' || inputs.suite == 'm2-association' || inputs.suite == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install hierarchical association environment
+        run: uv sync --extra dev --extra tracking
+      - name: Run motion-gated association validation
+        run: |
+          mkdir -p reports
+          uv run pytest \
+            tests/test_motion_association.py \
+            tests/test_bytetrack.py \
+            tests/test_tracking_outputs.py \
+            tests/test_schemas.py \
+            --junitxml=reports/m2-association.xml
+      - name: Upload association reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2-association-reports
           path: reports/

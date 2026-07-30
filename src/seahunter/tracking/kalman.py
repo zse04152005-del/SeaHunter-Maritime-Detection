@@ -79,6 +79,30 @@ class KalmanXYWH:
         updated_covariance = (identity - kalman_gain @ self._measurement_matrix) @ covariance
         return updated_mean, updated_covariance
 
+    def gating_distance(
+        self,
+        mean: Any,
+        covariance: Any,
+        bbox_xyxy: tuple[float, float, float, float],
+    ) -> float:
+        """Return squared Mahalanobis distance in center-XYWH measurement space."""
+
+        measurement = self._xyxy_to_xywh(bbox_xyxy)
+        projected_mean = self._measurement_matrix @ mean
+        scale = max(float(mean[2]), float(mean[3]), 1.0)
+        measurement_std = scale / 20.0
+        innovation_covariance = self._np.diag(self._np.array([measurement_std] * 4, dtype=float) ** 2)
+        projected_covariance = (
+            self._measurement_matrix @ covariance @ self._measurement_matrix.T + innovation_covariance
+        )
+        difference = measurement - projected_mean
+        try:
+            solved = self._np.linalg.solve(projected_covariance, difference)
+        except self._np.linalg.LinAlgError:
+            return float("inf")
+        distance = float(difference.T @ solved)
+        return distance if self._np.isfinite(distance) and distance >= 0.0 else float("inf")
+
     def apply_affine(self, mean: Any, covariance: Any, affine_2x3: tuple[float, ...]) -> tuple[Any, Any]:
         """Warp one predicted state from the previous camera view into the current view."""
 

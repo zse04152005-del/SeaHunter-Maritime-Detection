@@ -149,8 +149,8 @@ class Detection:
 
     def __post_init__(self) -> None:
         x1, y1, x2, y2 = self.bbox_xyxy
-        if x2 < x1 or y2 < y1:
-            raise ValueError("bbox_xyxy must satisfy x2 >= x1 and y2 >= y1")
+        if not all(isfinite(value) for value in self.bbox_xyxy) or x2 < x1 or y2 < y1:
+            raise ValueError("bbox_xyxy must be finite and satisfy x2 >= x1 and y2 >= y1")
         if self.class_id < 0:
             raise ValueError("class_id must be non-negative")
         if not self.class_name.strip():
@@ -179,6 +179,11 @@ class TrackState:
     age_frames: int = 1
     time_since_update: int = 0
     association_score: float | None = None
+    association_stage: str | None = None
+    motion_gate_distance: float | None = None
+    appearance_score: float | None = None
+    reid_eligible: bool | None = None
+    reid_bypass_reason: str | None = None
     lost_reason: TrackLossReason | None = None
     global_motion_affine: tuple[float, float, float, float, float, float] | None = None
     global_motion_quality: float | None = None
@@ -209,6 +214,18 @@ class TrackState:
             raise ValueError("time_since_update must be non-negative")
         if self.association_score is not None and not 0.0 <= self.association_score <= 1.0:
             raise ValueError("association_score must be within [0, 1]")
+        if self.association_stage is not None and not self.association_stage.strip():
+            raise ValueError("association_stage must not be empty")
+        if self.motion_gate_distance is not None and (
+            not isfinite(self.motion_gate_distance) or self.motion_gate_distance < 0.0
+        ):
+            raise ValueError("motion_gate_distance must be finite and non-negative")
+        if self.appearance_score is not None and not 0.0 <= self.appearance_score <= 1.0:
+            raise ValueError("appearance_score must be within [0, 1]")
+        if self.reid_bypass_reason is not None and not self.reid_bypass_reason.strip():
+            raise ValueError("reid_bypass_reason must not be empty")
+        if self.reid_eligible is True and self.reid_bypass_reason is not None:
+            raise ValueError("a ReID-eligible state cannot have a bypass reason")
         if self.observation is ObservationKind.OBSERVED and self.lost_reason is not None:
             raise ValueError("observed track states must not have a lost_reason")
         if self.observation is ObservationKind.INFERRED and self.lost_reason is None:

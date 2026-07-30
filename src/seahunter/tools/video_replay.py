@@ -84,6 +84,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--track-inferred-confidence-decay", type=float, default=0.9)
     parser.add_argument("--track-class-agnostic", action="store_true")
     parser.add_argument("--track-emit-lost", action="store_true")
+    parser.add_argument("--track-motion-gating-disabled", action="store_true")
+    parser.add_argument(
+        "--track-motion-gate-threshold",
+        type=float,
+        default=13.276704,
+        help="squared 4D Mahalanobis gate; default is the chi-square 99%% quantile",
+    )
     parser.add_argument("--track-trail-length", type=int, default=30)
     parser.add_argument("--gmc-disabled", action="store_true", help="disable BoT-SORT visual GMC for ablation")
     parser.add_argument("--gmc-downscale", type=int, default=2)
@@ -224,6 +231,8 @@ def main(argv: list[str] | None = None) -> int:
             "frames_processed": tracking_sink.frames_processed,
             "states_emitted": tracking_sink.states_emitted,
         }
+        if isinstance(tracking_sink.tracker, ByteTracker):
+            tracking_summary["association"] = tracking_sink.tracker.association_summary()
         if isinstance(tracking_sink.tracker, BoTSORTTracker):
             tracking_summary["global_motion"] = tracking_sink.tracker.motion_summary()
         output_summary["tracking"] = tracking_summary
@@ -244,6 +253,8 @@ def _build_tracker(args: argparse.Namespace) -> MultiObjectTracker:
         "inferred_confidence_decay": args.track_inferred_confidence_decay,
         "class_aware": not args.track_class_agnostic,
         "emit_lost_predictions": args.track_emit_lost,
+        "motion_gating_enabled": not args.track_motion_gating_disabled,
+        "motion_gate_threshold": args.track_motion_gate_threshold,
     }
     if args.tracker == "bytetrack":
         return ByteTracker(ByteTrackConfig(**common))

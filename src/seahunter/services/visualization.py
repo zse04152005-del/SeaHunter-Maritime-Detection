@@ -357,6 +357,11 @@ def _track_state_to_preview_record(state: TrackState) -> dict[str, object]:
         "lifecycle": state.lifecycle.value,
         "age_frames": state.age_frames,
         "time_since_update": state.time_since_update,
+        "association_stage": state.association_stage,
+        "motion_gate_distance": (None if state.motion_gate_distance is None else round(state.motion_gate_distance, 6)),
+        "appearance_score": None if state.appearance_score is None else round(state.appearance_score, 6),
+        "reid_eligible": state.reid_eligible,
+        "reid_bypass_reason": state.reid_bypass_reason,
         "lost_reason": None if state.lost_reason is None else state.lost_reason.value,
         "global_motion": (
             None

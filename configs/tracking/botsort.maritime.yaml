@@ -15,6 +15,8 @@ frame_rate: 30.0
 inferred_confidence_decay: 0.90
 class_aware: true
 emit_lost_predictions: false
+motion_gating_enabled: true
+motion_gate_threshold: 13.276704
 reid_enabled: false
 
 global_motion:
@@ -50,7 +52,7 @@ telemetry_motion_prior:
 
 outputs:
   mot_include_inferred: false
-  audit_jsonl_schema_version: 3
+  audit_jsonl_schema_version: 4
   track_trail_length: 30
 
 # Starting values only. Accept a real-data benefit only after paired no-GMC/GMC
