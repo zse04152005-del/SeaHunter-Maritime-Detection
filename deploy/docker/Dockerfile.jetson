@@ -1,0 +1,15 @@
+ARG L4T_BASE=nvcr.io/nvidia/l4t-jetpack:r36.4.0
+FROM ${L4T_BASE}
+
+ARG SEAHUNTER_VERSION=unversioned
+LABEL org.opencontainers.image.title="SeaHunter-VIS edge runtime" \
+      org.opencontainers.image.version="${SEAHUNTER_VERSION}"
+
+WORKDIR /opt/seahunter
+COPY configs/deployment /opt/seahunter/configs/deployment
+COPY src /opt/seahunter/src
+COPY pyproject.toml uv.lock README.md LICENSE /opt/seahunter/
+
+# Python dependencies and signed model packages are installed in the target-device build pipeline.
+# Do not bake registry credentials, signing keys, raw video, or unsigned engines into this image.
+ENTRYPOINT ["python3", "-m", "seahunter.tools.edge_service"]

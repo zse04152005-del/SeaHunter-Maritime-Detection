@@ -28,6 +28,7 @@ on:
           - m4-closure
           - m5-data
           - m6-innovation
+          - m7-productization
           - all
 
 permissions:
@@ -506,4 +507,33 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: m6-innovation-reports
+          path: reports/
+
+  m7-productization:
+    if: github.event_name == 'push' || inputs.suite == 'm7-productization' || inputs.suite == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install edge productization validation environment
+        run: uv sync --extra dev
+      - name: Run export, package, rollback, degradation, soak, and fault contracts
+        run: |
+          mkdir -p reports
+          uv run pytest \
+            tests/test_deployment_specs.py \
+            tests/test_deployment_package.py \
+            tests/test_deployment_control.py \
+            tests/test_decoder_capabilities.py \
+            tests/test_monitoring.py \
+            --junitxml=reports/m7-productization.xml
+      - name: Upload M7 productization reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m7-productization-reports
           path: reports/

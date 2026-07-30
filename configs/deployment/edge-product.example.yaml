@@ -1,0 +1,35 @@
+schema_version: 1
+model_package: /opt/seahunter/models/seahunter-v1.package.zip
+onnx:
+  opset: 18
+  static_shape: [1, 3, 1024, 1024]
+  dynamic_batch: true
+  dynamic_spatial: false
+tensorrt:
+  precision: fp16
+  workspace_mb: 2048
+  profile:
+    minimum: [1, 3, 768, 768]
+    optimum: [1, 3, 1024, 1024]
+    maximum: [4, 3, 1024, 1024]
+runtime:
+  implementation: deepstream
+  decoder: nvdec
+  inference_backend: tensorrt
+  cuda_stream_count: 2
+  preallocated_frame_buffers: 8
+degradation:
+  target_latency_ms: 50
+  thermal_warning_c: 80
+  thermal_critical_c: 90
+  memory_warning_fraction: 0.90
+  critical_timeout_streak: 3
+  recovery_samples: 10
+rollout:
+  canary_fraction: 0.10
+  required_healthy_samples: 60
+  health_endpoint: http://127.0.0.1:8000/health
+soak:
+  performance_hours: 8
+  stability_hours: 72
+  maximum_memory_slope_mb_per_hour: 1.0

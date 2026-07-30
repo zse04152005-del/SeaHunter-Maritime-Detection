@@ -1,0 +1,31 @@
+[application]
+enable-perf-measurement=1
+perf-measurement-interval-sec=5
+
+[source0]
+enable=1
+type=4
+uri=rtsp://127.0.0.1:8554/live
+latency=100
+num-extra-surfaces=4
+
+[streammux]
+batch-size=1
+width=1920
+height=1080
+live-source=1
+batched-push-timeout=40000
+
+[primary-gie]
+enable=1
+batch-size=1
+model-engine-file=/opt/seahunter/models/seahunter-v1.fp16.engine
+interval=0
+
+[sink0]
+enable=1
+type=1
+sync=0
+
+# This is a deployment template, not proof that NVDEC or TensorRT executed.
+# Capture gst-inspect, DeepStream logs, engine metadata, and nvidia-smi/tegrastats on the target device.
