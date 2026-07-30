@@ -31,6 +31,7 @@
 - Cloud-accepted M3 geolocation wiring with 21 focused tests while retaining the real truth-set accuracy gate.
 - Added local/geodetic danger zones, six stateful rules, hysteresis/dwell/cooldown, reliability gating, weighted risk,
   and acknowledged event lifecycle for M4.
+- Cloud-accepted the M4 event core with 18 focused tests; real event-level performance gates remain open.
 
 This log summarizes accepted engineering increments. Exact implementation and validation evidence remains in Git
 history and `docs/reports/`.
