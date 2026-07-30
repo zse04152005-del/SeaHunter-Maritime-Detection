@@ -30,6 +30,7 @@ on:
           - m6-innovation
           - m7-productization
           - m7-onnx
+          - m8-readiness
           - all
 
 permissions:
@@ -577,3 +578,33 @@ jobs:
         with:
           name: m7-onnx-models-and-reports
           path: reports/m7-onnx/
+
+  m8-readiness:
+    if: github.event_name == 'push' || inputs.suite == 'm8-readiness' || inputs.suite == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install release-readiness validation environment
+        run: uv sync --extra dev
+      - name: Run sea-trial, review, evidence, and release-freeze gates
+        run: |
+          mkdir -p reports
+          uv run pytest \
+            tests/test_acceptance.py \
+            tests/test_release_gate.py \
+            tests/test_acceptance_cli.py \
+            --junitxml=reports/m8-readiness.xml
+          uv run seahunter-acceptance-audit \
+            configs/acceptance/m8_submission.template.json \
+            --output reports/m8-template-readiness.json
+      - name: Upload M8 readiness reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m8-readiness-reports
+          path: reports/

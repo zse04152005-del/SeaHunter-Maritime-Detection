@@ -1,0 +1,18 @@
+{
+  "plan": {
+    "maximum_distance_mae_m": 20.0,
+    "maximum_false_alarms_per_hour": 1.0,
+    "maximum_missed_alerts": 0,
+    "minimum_blind_operator_trials": 5,
+    "minimum_locations": 2,
+    "minimum_reacquisition_rate": 0.8,
+    "plan_id": "seahunter-v1-sea-trial",
+    "required_altitude_bands": ["low", "medium", "high"],
+    "required_sea_states": ["calm", "moderate", "rough"],
+    "required_time_bands": ["dawn", "day", "dusk", "night"],
+    "required_weather": ["normal", "low_light", "fog", "glare", "high_wave"]
+  },
+  "reviews": [],
+  "status": "template-not-acceptance-evidence",
+  "trials": []
+}
