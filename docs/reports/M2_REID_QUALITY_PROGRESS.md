@@ -2,7 +2,7 @@
 
 Date: 2026-07-30
 Branch: `feature/m2-bytetrack-baseline`
-Status: implementation complete; cloud validation pending
+Status: cloud accepted; real maritime calibration remains open
 
 ## Implemented
 
@@ -31,3 +31,19 @@ The histogram encoder is an edge-friendly integration baseline, not a claim of d
 Synthetic tests use scripted embeddings to prove lifecycle, gating, template, and audit behavior. The deployment
 configuration stays disabled until a held-out real maritime crop/track set calibrates gates and compares a validated
 ONNX encoder. No real ID-switch or reacquisition-rate improvement is claimed here.
+
+## Cloud acceptance
+
+- Accepted commit: `50122476b86265673924ea396101b170d754ed12`.
+- The focused `m2-reid` job passed 19 tests in 1.34 seconds.
+- Cloud validation:
+  <https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30536083275>
+- Python 3.10/3.12 CI and quality gates:
+  <https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30536083108>
+- ReID artifact:
+  <https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30536083275/artifacts/8756699258>
+
+## Remaining external gate
+
+- Calibrate crop gates, similarity thresholds, and the final encoder on leakage-free held-out maritime tracks before
+  enabling ReID in a deployment configuration.

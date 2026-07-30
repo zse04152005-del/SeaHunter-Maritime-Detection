@@ -19,6 +19,7 @@
   guidance, and a focused cloud-validation job.
 - Added quality-gated BoT-SORT ReID, clear-frame tracklet template aggregation, explicit tiny-target bypass, a
   replaceable appearance encoder contract, and focused identity-recovery tests.
+- Cloud-accepted the M2 ReID increment with 19 focused tests while retaining the real-maritime calibration gate.
 
 This log summarizes accepted engineering increments. Exact implementation and validation evidence remains in Git
 history and `docs/reports/`.

@@ -2,7 +2,7 @@
 
 Date: 2026-07-30
 Branch: `feature/m2-bytetrack-baseline`
-Status: high/low/motion layers cloud accepted; ReID layer remains next
+Status: high/low/motion/ReID layers cloud accepted; real maritime calibration remains open
 
 ## Implemented
 
@@ -33,5 +33,9 @@ calibration and ID-switch benefit require the held-out maritime MOT corpus and r
 - Association artifact:
   <https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30535088756/artifacts/8756297720>
 
-The composite ROADMAP association item remains open until the separately quality-gated ReID layer is implemented and
-accepted. No maritime ID-switch improvement is claimed from the synthetic motion-gate cases.
+The separately quality-gated ReID layer was accepted in commit
+`50122476b86265673924ea396101b170d754ed12` by the 19-test `m2-reid` job in
+<https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30536083275>. The composite ROADMAP
+association item is therefore complete at the implementation/wiring level. No maritime ID-switch improvement is
+claimed from the synthetic motion-gate or ReID cases; real calibration and benefit measurement remain external data
+gates.
