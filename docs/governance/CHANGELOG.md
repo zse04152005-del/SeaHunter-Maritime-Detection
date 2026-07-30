@@ -32,6 +32,18 @@
 - Added local/geodetic danger zones, six stateful rules, hysteresis/dwell/cooldown, reliability gating, weighted risk,
   and acknowledged event lifecycle for M4.
 - Cloud-accepted the M4 event core with 18 focused tests; real event-level performance gates remain open.
+- Added restart-safe SQLite event persistence, atomic evidence bundles, REST/WebSocket/MQTT publication, operator
+  acknowledgement/feedback, and false-positive hard-sample export; cloud-accepted the M4 closure with 16 tests.
+- Added M5 data contracts, leakage/weather/size/hard-negative audits, active learning, temporal Tracklet pseudo-label
+  filters, confidence calibration, DVC/lakeFS configuration, and MLflow provenance; cloud-accepted 11 tests.
+- Added M6 selective ROI, finite temporal monitoring, bounded joint confidence, export-friendly joint downsampling,
+  clip-stable weather routing, and three-seed ablation contracts; cloud-accepted 11 tests.
+- Added M7 export/build specifications, signed model packages, thermal/memory/timeout degradation, durable canary
+  rollback, soak/fault gates, Jetson/DeepStream templates, and 15 productization tests.
+- Fixed dynamic ONNX export in the custom EMA module with equivalent axis reductions; cloud-exported and verified
+  static and dynamic-batch ONNX artifacts against PyTorch.
+- Added M8 sea-trial coverage/metric/evidence/review audits and a release freeze that refuses incomplete external
+  gates; cloud-accepted 8 readiness tests while intentionally leaving V1 unfrozen.
 
 This log summarizes accepted engineering increments. Exact implementation and validation evidence remains in Git
 history and `docs/reports/`.

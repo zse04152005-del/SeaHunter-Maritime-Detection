@@ -4,9 +4,11 @@ SeaHunter-VIS is the system-level evolution of the original SeaHunter maritime d
 
 ## Current status
 
-The repository has completed the locally verifiable M0 work and implemented the M1 video-stream foundation. It has
-now started **M2: multi-object tracking and trajectory recovery**. Dataset metric reproduction and TensorRT
-validation remain gated by external data and NVIDIA target hardware.
+The repository now contains the cloud-verifiable engineering baseline through M8: video ingestion, tracking and
+trajectory recovery, calibrated geolocation/trend estimation, danger-zone events, data/semisupervised controls,
+deployability-constrained innovations, edge productization controls, and sea-trial/release gates. It is **not a
+frozen V1 release**: real maritime metrics, external ranging truth, NVIDIA TensorRT/NVDEC performance, 8/72-hour
+target-device runs, operator blind tests, sea trials, and formal approvals remain external gates.
 
 - The original detector and weight are retained as a reproducible legacy baseline.
 - Historical training and inference scripts live in `legacy/`.
@@ -25,6 +27,15 @@ validation remain gated by external data and NVIDIA target hardware.
   ID-switch improvement is a wiring check, not a real maritime performance claim.
 - The ByteTrack baseline passed the Python 3.10/3.12 CI matrix plus focused M2 tracking, M1 replay, and legacy-weight
   CPU cloud validation suites.
+- M3 provides quality-gated camera/telemetry geometry, sea-plane intersection, uncertainty, ENU EKF, trend, and TTC.
+- M4 provides durable events, restart recovery, evidence ZIPs, REST/WebSocket/MQTT, acknowledgement, and feedback.
+- M5 provides leakage/data audits, active learning, teacher-student pseudo-label filters, calibration, and MLOps
+  provenance; the example manifest is metadata-only and not acceptance data.
+- M6 provides independently switchable ROI, temporal, confidence, downsampling, and weather-routing reference
+  modules plus a three-seed deployability-aware ablation contract.
+- M7 exports cloud-validated static/dynamic ONNX models and provides signed packages, degradation, canary rollback,
+  soak/fault contracts, and deployment templates. TensorRT/NVDEC still require the target device.
+- M8 prevents V1 freezing until sea-trial coverage, metrics, evidence, reviews, and all external gates pass.
 - The complete execution order and acceptance gates are defined in [ROADMAP.md](ROADMAP.md).
 
 ## Repository layout
@@ -59,9 +70,9 @@ Install the optional legacy detector stack only when running model tests:
 uv pip install -e ".[legacy-detector]"
 ```
 
-The authoritative test matrix runs in GitHub Actions on Python 3.10 and 3.12. The manual `cloud-validation`
-workflow provides focused `m0-governance`, `legacy-detector`, `m1-replay`, `m2-tracking`, `m2-evaluation`, `m2-gmc`,
-`m2-motion-prior`, `m2-association`, `m2-reid`, `m2-recovery`, and `all` suites with JUnit and metric artifacts.
+The authoritative test matrix runs in GitHub Actions on Python 3.10 and 3.12. The manual `cloud-validation` workflow
+provides focused M0-M8 suites, including M3 geometry, M4 events, M5 data, M6 innovation, M7 productization/ONNX, and
+M8 release readiness, with JUnit, reports, and model artifacts.
 
 ## Detector experiment planning
 
