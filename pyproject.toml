@@ -61,6 +61,7 @@ dev = [
 
 [project.scripts]
 seahunter-baseline-audit = "seahunter.tools.baseline_audit:main"
+seahunter-calibration-audit = "seahunter.tools.calibration_audit:main"
 seahunter-decode-capabilities = "seahunter.tools.decode_capabilities:main"
 seahunter-edge-service = "seahunter.tools.edge_service:main"
 seahunter-mot-evaluate = "seahunter.tools.mot_evaluate:main"

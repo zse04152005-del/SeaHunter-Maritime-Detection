@@ -23,6 +23,8 @@
 - Added finite extrapolation, bounded short-gap interpolation, schema 5 inference-method audit, CLI controls, and a
   focused cloud-validation suite.
 - Cloud-accepted M2 trajectory recovery with 32 focused tests; real maritime occlusion metrics remain gated.
+- Added strict camera calibration, MAVLink aggregation, affine clock synchronization, frame/telemetry latency
+  alignment, and explicit camera/FRD/NED/ENU/WGS84 transforms for the M3 foundation.
 
 This log summarizes accepted engineering increments. Exact implementation and validation evidence remains in Git
 history and `docs/reports/`.

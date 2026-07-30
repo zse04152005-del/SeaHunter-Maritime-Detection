@@ -1,0 +1,14 @@
+schema_version: 1
+clock_sync:
+  minimum_samples: 5
+  maximum_samples: 256
+  maximum_absolute_drift_ppm: 2000.0
+  maximum_rmse_ms: 50.0
+frame_alignment:
+  video_latency_seconds: 0.0
+  maximum_alignment_error_seconds: 0.10
+  minimum_telemetry_quality: 0.50
+  maximum_packets_per_source: 512
+
+# Starting gates only. Measure transport, decoder, camera, and autopilot latency
+# together on the target aircraft and freeze them per hardware/firmware profile.

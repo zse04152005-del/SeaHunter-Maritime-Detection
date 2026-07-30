@@ -19,6 +19,15 @@ class SourceKind(str, Enum):
     HTTP = "http"
 
 
+class AltitudeDatum(str, Enum):
+    """Reference surface used by one telemetry altitude."""
+
+    UNKNOWN = "unknown"
+    RELATIVE_HOME = "relative_home"
+    AMSL = "amsl"
+    WGS84_ELLIPSOID = "wgs84_ellipsoid"
+
+
 class ObservationKind(str, Enum):
     """Whether a track point was directly observed or synthesized."""
 
@@ -116,6 +125,7 @@ class TelemetryPacket:
     gimbal_pitch_deg: float = 0.0
     gimbal_yaw_deg: float = 0.0
     quality: float = 1.0
+    altitude_datum: AltitudeDatum = AltitudeDatum.UNKNOWN
 
     def __post_init__(self) -> None:
         if not self.source_id.strip():
@@ -141,6 +151,8 @@ class TelemetryPacket:
             raise ValueError("longitude_deg must be within [-180, 180]")
         if not 0.0 <= self.quality <= 1.0:
             raise ValueError("quality must be within [0, 1]")
+        if not isinstance(self.altitude_datum, AltitudeDatum):
+            raise ValueError("altitude_datum must be an AltitudeDatum")
 
 
 @dataclass(frozen=True, slots=True)

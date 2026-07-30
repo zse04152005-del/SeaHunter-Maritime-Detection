@@ -1,6 +1,7 @@
 """Shared data contracts used across the SeaHunter-VIS pipeline."""
 
 from .models import (
+    AltitudeDatum,
     Detection,
     EventStatus,
     FramePacket,
@@ -17,6 +18,7 @@ from .models import (
 )
 
 __all__ = [
+    "AltitudeDatum",
     "Detection",
     "EventStatus",
     "FramePacket",

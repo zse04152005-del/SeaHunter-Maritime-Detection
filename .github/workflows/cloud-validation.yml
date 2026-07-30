@@ -22,6 +22,7 @@ on:
           - m2-association
           - m2-reid
           - m2-recovery
+          - m3-foundation
           - all
 
 permissions:
@@ -326,4 +327,36 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: m2-recovery-reports
+          path: reports/
+
+  m3-foundation:
+    if: github.event_name == 'push' || inputs.suite == 'm3-foundation' || inputs.suite == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install M3 foundation environment
+        run: uv sync --extra dev
+      - name: Run calibration, transform, MAVLink, and synchronization validation
+        run: |
+          mkdir -p reports
+          uv run pytest \
+            tests/test_geometry_foundation.py \
+            tests/test_telemetry_sync.py \
+            tests/test_mavlink_adapter.py \
+            tests/test_telemetry_motion.py \
+            tests/test_schemas.py \
+            --junitxml=reports/m3-foundation.xml
+          uv run seahunter-calibration-audit \
+            configs/geometry/camera.example.json \
+            --output reports/camera-calibration-audit.json
+      - name: Upload M3 foundation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m3-foundation-reports
           path: reports/

@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "calibration_id": "camera-example-v1",
+  "camera_serial": "REPLACE_WITH_SERIAL",
+  "lens_id": "REPLACE_WITH_LENS",
+  "calibrated_at": "2026-07-30T00:00:00Z",
+  "quality": 0.8,
+  "intrinsics": {
+    "width": 1920,
+    "height": 1080,
+    "fx_px": 1200.0,
+    "fy_px": 1200.0,
+    "cx_px": 960.0,
+    "cy_px": 540.0,
+    "distortion": [0.0, 0.0, 0.0, 0.0, 0.0],
+    "calibration_rms_px": 0.4
+  },
+  "extrinsics": {
+    "rotation_camera_to_gimbal": [
+      0.0,
+      0.0,
+      1.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0
+    ],
+    "translation_camera_in_gimbal_m": [0.0, 0.0, 0.0]
+  }
+}
