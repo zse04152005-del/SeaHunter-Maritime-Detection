@@ -9,5 +9,6 @@
 | 2026-07-30 | D-005 | Treat synthetic metrics as wiring checks, never dataset performance claims | Prevent false acceptance without maritime truth data | Never; real claims require versioned held-out data |
 | 2026-07-30 | D-006 | Run tests/experiments in GitHub Actions when possible | Keep the local workstation for editing and static checks | Target hardware tasks require a dedicated runner |
 | 2026-07-30 | D-007 | Replace the legacy one-entry “ablation” script with a strict JSON experiment matrix | Freeze variants, seeds, NWD controls, and manifests before GPU allocation | Schema migration with backward-compatibility note |
+| 2026-07-30 | D-008 | Separate decoder build capability, actual source selection, and NVDEC target proof | Generic OpenCV hardware flags can silently fall back and cannot independently prove NVDEC | A dedicated runtime exposes stronger vendor-specific decoder evidence |
 
 Architecture decisions with broader context remain under `docs/adr/`.

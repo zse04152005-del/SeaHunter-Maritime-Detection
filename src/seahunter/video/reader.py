@@ -10,7 +10,7 @@ from math import isfinite
 from pathlib import Path
 from threading import Event, RLock
 from time import monotonic
-from typing import Any, Literal, Protocol
+from typing import Any, Literal, Protocol, runtime_checkable
 
 from seahunter.schemas import FramePacket, SourceKind
 
@@ -104,6 +104,28 @@ class ReaderStats:
     last_error: str | None
 
 
+@dataclass(frozen=True, slots=True)
+class DecoderSelectionReport:
+    """Auditable result of one OpenCV decoder-selection attempt.
+
+    ``nvdec_verified`` deliberately remains false for generic OpenCV capture.
+    OpenCV can report an effective acceleration API, but that alone does not
+    prove that NVIDIA's NVDEC decoder processed the stream.
+    """
+
+    requested_backend: DecoderBackend
+    selected_backend: str | None
+    hardware_requested: bool
+    hardware_property_supported: bool
+    hardware_attempted: bool
+    hardware_fallback: bool
+    fallback_reason: str | None
+    effective_hardware_acceleration: str | None
+    effective_hardware_acceleration_code: int | None
+    effective_hardware_device: int | None
+    nvdec_verified: bool = False
+
+
 class CaptureBackend(Protocol):
     """Small testable wrapper around a concrete decoder capture."""
 
@@ -118,6 +140,13 @@ class CaptureBackend(Protocol):
     def release(self) -> None: ...
 
 
+@runtime_checkable
+class DecoderSelectionProvider(Protocol):
+    """Optional capture capability implemented by auditable backends."""
+
+    def decoder_selection(self) -> DecoderSelectionReport: ...
+
+
 class CaptureFactory(Protocol):
     """Factory contract allowing decoder behavior to be mocked in tests."""
 
@@ -125,9 +154,10 @@ class CaptureFactory(Protocol):
 
 
 class _OpenCVCapture:
-    def __init__(self, capture: Any, cv2_module: Any) -> None:
+    def __init__(self, capture: Any, cv2_module: Any, selection: DecoderSelectionReport) -> None:
         self._capture = capture
         self._cv2 = cv2_module
+        self._selection = selection
 
     def is_opened(self) -> bool:
         return bool(self._capture.isOpened())
@@ -145,8 +175,11 @@ class _OpenCVCapture:
     def release(self) -> None:
         self._capture.release()
 
+    def decoder_selection(self) -> DecoderSelectionReport:
+        return self._selection
 
-def _opencv_capture_factory(source: VideoSource, config: OpenCVReaderConfig) -> CaptureBackend:
+
+def create_opencv_capture(source: VideoSource, config: OpenCVReaderConfig) -> CaptureBackend:
     """Create an OpenCV capture while preferring FFmpeg and hardware decode."""
 
     cv2: Any = importlib.import_module("cv2")
@@ -169,11 +202,14 @@ def _opencv_capture_factory(source: VideoSource, config: OpenCVReaderConfig) -> 
             ]
         )
 
+    hardware_requested = config.prefer_hardware_decode and source.kind is not SourceKind.DEVICE
     hardware_params: list[int] = []
-    if config.prefer_hardware_decode and source.kind is not SourceKind.DEVICE:
+    hardware_property_supported = False
+    if hardware_requested:
         acceleration_property = getattr(cv2, "CAP_PROP_HW_ACCELERATION", None)
         acceleration_any = getattr(cv2, "VIDEO_ACCELERATION_ANY", None)
         if acceleration_property is not None and acceleration_any is not None:
+            hardware_property_supported = True
             hardware_params.extend([int(acceleration_property), int(acceleration_any)])
 
     def create(params: list[int]) -> Any:
@@ -183,11 +219,92 @@ def _opencv_capture_factory(source: VideoSource, config: OpenCVReaderConfig) -> 
             return cv2.VideoCapture(target)
         return cv2.VideoCapture(target, api_preference)
 
-    capture = create(timeout_params + hardware_params)
+    hardware_attempted = bool(hardware_params)
+    hardware_fallback = False
+    fallback_reason: str | None = None
+    try:
+        capture = create(timeout_params + hardware_params)
+    except Exception as exc:
+        if not hardware_params:
+            raise
+        capture = create(timeout_params)
+        hardware_fallback = True
+        fallback_reason = f"hardware-requested capture raised {type(exc).__name__}; retried without acceleration"
     if not capture.isOpened() and hardware_params:
         capture.release()
         capture = create(timeout_params)
-    return _OpenCVCapture(capture, cv2)
+        hardware_fallback = True
+        fallback_reason = "hardware-requested capture failed to open; retried without acceleration"
+
+    selected_backend = _capture_backend_name(capture)
+    acceleration_code, acceleration_name = _capture_hardware_acceleration(capture, cv2)
+    hardware_device = _capture_hardware_device(capture, cv2)
+    acceleration_none = getattr(cv2, "VIDEO_ACCELERATION_NONE", 0)
+    if (
+        hardware_attempted
+        and not hardware_fallback
+        and acceleration_code is not None
+        and acceleration_code == int(acceleration_none)
+    ):
+        hardware_fallback = True
+        fallback_reason = "capture opened but reported software decoding"
+    if hardware_requested and not hardware_property_supported:
+        hardware_fallback = True
+        fallback_reason = "OpenCV build does not expose hardware-acceleration capture properties"
+
+    selection = DecoderSelectionReport(
+        requested_backend=config.backend,
+        selected_backend=selected_backend,
+        hardware_requested=hardware_requested,
+        hardware_property_supported=hardware_property_supported,
+        hardware_attempted=hardware_attempted,
+        hardware_fallback=hardware_fallback,
+        fallback_reason=fallback_reason,
+        effective_hardware_acceleration=acceleration_name,
+        effective_hardware_acceleration_code=acceleration_code,
+        effective_hardware_device=hardware_device,
+    )
+    return _OpenCVCapture(capture, cv2, selection)
+
+
+def _capture_backend_name(capture: Any) -> str | None:
+    getter = getattr(capture, "getBackendName", None)
+    if not callable(getter) or not capture.isOpened():
+        return None
+    try:
+        value = str(getter()).strip()
+    except Exception:
+        return None
+    return value or None
+
+
+def _capture_hardware_acceleration(capture: Any, cv2: Any) -> tuple[int | None, str | None]:
+    property_id = getattr(cv2, "CAP_PROP_HW_ACCELERATION", None)
+    if property_id is None or not capture.isOpened():
+        return None, None
+    try:
+        code = int(round(float(capture.get(property_id))))
+    except Exception:
+        return None, None
+    names = {
+        int(value): name.removeprefix("VIDEO_ACCELERATION_").lower()
+        for name in dir(cv2)
+        if name.startswith("VIDEO_ACCELERATION_")
+        for value in [getattr(cv2, name)]
+        if isinstance(value, int)
+    }
+    return code, names.get(code, f"unknown-{code}")
+
+
+def _capture_hardware_device(capture: Any, cv2: Any) -> int | None:
+    property_id = getattr(cv2, "CAP_PROP_HW_DEVICE", None)
+    if property_id is None or not capture.isOpened():
+        return None
+    try:
+        value = int(round(float(capture.get(property_id))))
+    except Exception:
+        return None
+    return value if value >= 0 else None
 
 
 class OpenCVFrameReader:
@@ -206,7 +323,7 @@ class OpenCVFrameReader:
         *,
         source_id: str | None = None,
         config: OpenCVReaderConfig | None = None,
-        capture_factory: CaptureFactory = _opencv_capture_factory,
+        capture_factory: CaptureFactory = create_opencv_capture,
         utc_clock: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
         monotonic_clock: Callable[[], float] = monotonic,
         sleeper: Callable[[float], None] | None = None,
@@ -234,6 +351,7 @@ class OpenCVFrameReader:
         self._bad_frames = 0
         self._reconnect_attempts = 0
         self._last_error: str | None = None
+        self._decoder_selection: DecoderSelectionReport | None = None
 
     def open(self) -> None:
         """Open the source once; retry policy is applied by :meth:`read`."""
@@ -266,6 +384,8 @@ class OpenCVFrameReader:
                 capture.release()
                 raise ReaderClosed("reader was closed while opening")
             self._capture = capture
+            if isinstance(capture, DecoderSelectionProvider):
+                self._decoder_selection = capture.decoder_selection()
             self._open_count += 1
             self._last_error = None
 
@@ -383,6 +503,12 @@ class OpenCVFrameReader:
                 reconnect_attempts=self._reconnect_attempts,
                 last_error=self._last_error,
             )
+
+    def decoder_selection(self) -> DecoderSelectionReport | None:
+        """Return the latest successful decoder-selection audit record."""
+
+        with self._lock:
+            return self._decoder_selection
 
     def __iter__(self) -> Iterator[FramePacket]:
         while True:

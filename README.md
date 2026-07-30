@@ -121,6 +121,23 @@ Use `--max-reconnect-attempts -1` for an always-on service. The default finite r
 Hardware decoding is requested through the selected OpenCV backend when available, but NVDEC must still be verified
 on the target NVIDIA device before it is treated as an accepted deployment capability.
 
+Generate a machine-readable OpenCV build report without opening media:
+
+```powershell
+seahunter-decode-capabilities --output .\reports\decoder-build-capabilities.json
+```
+
+On the target edge device, add `--source` to open and decode one frame. The report records the requested and selected
+backend, the effective acceleration API, and any deterministic software fallback. It never treats OpenCV's generic
+hardware flag or CUDA visibility as proof of NVDEC, and it does not serialize the source URL or credentials.
+
+```powershell
+seahunter-decode-capabilities `
+  --source rtsp://camera.example/live `
+  --backend ffmpeg `
+  --output .\reports\target-decoder-selection.json
+```
+
 ## ByteTrack and BoT-SORT baselines
 
 Enable the M2 tracker during replay and write both evaluation and audit outputs:

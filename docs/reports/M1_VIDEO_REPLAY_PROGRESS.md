@@ -16,6 +16,9 @@ separates correctness/evaluation metadata from volatile runtime performance data
 - OpenCV capture wrapper with FFmpeg/GStreamer/automatic backend selection.
 - Open/read timeout parameters for network sources.
 - Hardware decode preference with software fallback when the OpenCV build supports acceleration properties.
+- Machine-readable OpenCV build capability audit for FFmpeg, GStreamer, CUDA visibility, and capture properties.
+- Per-source decoder selection audit with the requested/selected backend, effective acceleration API, hardware device,
+  and explicit software-fallback reason. Generic OpenCV acceleration never sets `nvdec_verified=true`.
 - Frame ID, media PTS, estimated capture timestamp, decode completion timestamp, and decode duration.
 - Deterministic file timeline anchored at the Unix epoch, derived from media PTS with FPS fallback.
 - Exponential backoff and configurable reconnect budget for device and network sources.
@@ -64,6 +67,8 @@ flowchart LR
 - A real background Uvicorn smoke test returned HTTP 200 from `/health` and shut down its server thread cleanly.
 - Resource sampling tests verify interval gating, peak aggregation, and non-fatal provider failures.
 - CLI validation rejects output-path collisions and any attempt to overwrite a local input video.
+- Deterministic mocked decoder tests distinguish a hardware-open failure followed by software recovery from an
+  effective acceleration selection, while keeping NVDEC unverified in both cases.
 - Ruff lint/format and strict mypy checks pass for the new system code.
 - Framework-neutral suite: 48 tests passed.
 - Legacy detector video replay is covered by an opt-in CPU model test using `SEAHUNTER_RUN_MODEL_TESTS=1`.

@@ -11,6 +11,8 @@
 - Added ByteTrack, track audit/MOT output, visualization, TrackEval evaluation, BoT-SORT visual GMC, and cloud ablations.
 - Replaced the legacy single-entry pseudo-ablation with a strict multi-variant, three-seed experiment plan and dry-run
   validation path.
+- Added auditable OpenCV decoder build/selection reports and deterministic hardware-to-software fallback coverage;
+  target-device NVDEC acceptance remains explicitly open.
 
 This log summarizes accepted engineering increments. Exact implementation and validation evidence remains in Git
 history and `docs/reports/`.

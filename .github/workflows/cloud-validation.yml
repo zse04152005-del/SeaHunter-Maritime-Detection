@@ -99,11 +99,14 @@ jobs:
         run: |
           mkdir -p reports
           uv run pytest \
+            tests/test_decoder_capabilities.py \
             tests/test_opencv_replay.py \
             tests/test_preview.py \
             tests/test_parquet_sink.py \
             tests/test_result_sinks.py \
             --junitxml=reports/m1-replay.xml
+          uv run seahunter-decode-capabilities \
+            --output reports/decoder-build-capabilities.json
       - name: Upload replay reports
         if: always()
         uses: actions/upload-artifact@v4
