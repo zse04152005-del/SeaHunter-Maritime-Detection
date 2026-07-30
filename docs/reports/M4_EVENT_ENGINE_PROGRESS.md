@@ -2,7 +2,7 @@
 
 Date: 2026-07-30
 Branch: `feature/m2-bytetrack-baseline`
-Status: cloud accepted; real event-quality calibration remains open
+Status: engineering closure cloud accepted; real event-quality calibration remains open
 
 ## Implemented
 
@@ -13,6 +13,18 @@ Status: cloud accepted; real event-quality calibration remains open
 - Reliability gate that ignores low-quality frames instead of opening or closing an event on one bad observation.
 - Weighted reliability/TTC/class/zone risk score and deterministic event IDs.
 - `open/updated/acknowledged/closed` lifecycle with acknowledgement persistence during later updates.
+
+## Service closure
+
+- SQLite latest-state storage with append-only lifecycle transitions and operator-feedback audit records.
+- Startup restoration of all non-closed events into the stateful rule engine.
+- Bounded pre/post-event JPEG ring with atomic ZIP finalization.
+- Evidence bundles contain frames, track JSONL, telemetry JSONL, model manifests, the final event lifecycle state,
+  and SHA-256 digests for every bundled artifact.
+- REST endpoints for event query, transition history, acknowledgement, and operator feedback.
+- Bounded WebSocket history and pluggable MQTT publication. MQTT failures are retained as bounded local diagnostics
+  and do not interrupt SQLite persistence, evidence capture, or WebSocket delivery.
+- False-positive feedback is appended to a reproducible hard-sample JSONL pool.
 
 ## Acceptance boundary
 
@@ -33,6 +45,19 @@ recall, and false alarms/hour remain real replay and field gates.
 
 The first run correctly exposed a test fixture that omitted TTC while asserting a TTC-weighted score. The accepted
 rerun uses a 30-second TTC above the collision threshold, independently exercising the TTC risk contribution.
+
+## Closure cloud acceptance
+
+- Accepted implementation commit: `6dcd642b22f707267218a7f9360973ff5be00cba`.
+- The `m4-closure` job collected and passed 16 persistence, restart, evidence, REST, WebSocket, MQTT, feedback,
+  geometry, and lifecycle tests.
+- Focused job: <https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30540735540/job/90864649368>
+- JUnit artifact: <https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30540735540/artifacts/8758569079>
+- Python 3.10/3.12 CI, strict typing, lint, formatting, full test, and original-weight CPU regression:
+  <https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30540735566>
+
+Synthetic rule paths, fake MQTT clients, and generated JPEG payloads validate contracts and failure handling only;
+they do not establish event precision/recall or evidence quality on real maritime video.
 
 ## Remaining external gate
 
