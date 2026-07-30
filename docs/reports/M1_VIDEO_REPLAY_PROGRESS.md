@@ -5,8 +5,9 @@ Branch: `develop`
 
 ## Outcome
 
-The first executable M1 slice now supports deterministic offline video detection and freshness-first live ingestion.
-It intentionally separates correctness/evaluation metadata from volatile runtime performance data.
+The executable M1 pipeline now supports deterministic offline video detection, freshness-first live ingestion,
+operator preview, visual recording, columnar evaluation output, and process/device monitoring. It intentionally
+separates correctness/evaluation metadata from volatile runtime performance data.
 
 ## Implemented
 
@@ -23,7 +24,15 @@ It intentionally separates correctness/evaluation metadata from volatile runtime
 - Sequential offline mode that does not skip frames and does not accumulate detector results in memory.
 - Canonical JSONL detection records independent of Ultralytics result types.
 - Separate performance summary with throughput, decode P50/P95, inference P50/P95/P99, queue drops, and SHA-256.
+- Versioned `FrameResult` and `FrameResultSink` contracts for independent downstream outputs.
+- Flattened, bounded-batch Parquet output with explicit empty-frame rows for offline evaluation.
+- Annotated video output with class labels, confidence, frame ID, inference time, and dropped-frame overlay.
+- Single-slot annotated JPEG preview hub that drops superseded preview frames instead of accumulating them.
+- FastAPI/Uvicorn edge preview with HTML viewer, `/health`, `/metrics`, and `/ws/preview` endpoints.
+- Process RSS/CPU/system-memory sampling through psutil and optional NVIDIA memory/utilization/temperature/power
+  sampling through `nvidia-smi`.
 - `seahunter-video-replay` CLI for file and live-source processing.
+- `seahunter-edge-service` prototype with real-time, WebSocket preview, and always-reconnect defaults.
 
 ## Data flow
 
@@ -37,7 +46,11 @@ flowchart LR
     E --> G["Framework-neutral Detector"]
     F --> G
     G --> H["Canonical JSONL detections"]
-    G --> I["Runtime latency/FPS summary"]
+    G --> I["Flattened Parquet batches"]
+    G --> J["Annotated video writer"]
+    G --> K["Single-slot JPEG preview hub"]
+    K --> L["FastAPI WebSocket + HTML viewer"]
+    G --> M["Runtime latency and resource summary"]
 ```
 
 ## Verification
@@ -46,19 +59,22 @@ flowchart LR
 - Offline replay is executed twice and produces byte-identical JSONL and matching SHA-256 digests.
 - Mocked RTSP/SRT failures verify reconnect success and reconnect-budget exhaustion.
 - A fast producer test verifies that a capacity-two queue retains only the latest two of five frames.
+- One synthetic replay simultaneously writes JSONL, Parquet, annotated video, and latest-frame JPEG preview output.
+- FastAPI health, metrics, HTML, and WebSocket frame delivery are covered through an in-process client.
+- A real background Uvicorn smoke test returned HTTP 200 from `/health` and shut down its server thread cleanly.
+- Resource sampling tests verify interval gating, peak aggregation, and non-fatal provider failures.
+- CLI validation rejects output-path collisions and any attempt to overwrite a local input video.
 - Ruff lint/format and strict mypy checks pass for the new system code.
-- Framework-neutral suite: 35 tests passed.
+- Framework-neutral suite: 48 tests passed.
 - Legacy detector video replay is covered by an opt-in CPU model test using `SEAHUNTER_RUN_MODEL_TESTS=1`.
 
 ## Remaining M1 work
 
 - Verify that the target NVIDIA/OpenCV or GStreamer build actually selects NVDEC; requesting acceleration is not
   sufficient evidence.
-- Add annotated-video output and a basic WebSocket preview service.
-- Add Parquet output for large offline evaluation runs.
-- Add process RSS, GPU memory, utilization, power, and temperature monitoring.
 - Run sustained 1080p benchmarks and record end-to-end P95/FPS on the target edge device.
 - Execute disconnect/recovery soak tests against a real RTSP camera or controlled proxy.
+- Add authentication/TLS and an external metrics exporter before exposing preview outside a controlled edge network.
 
 ## External constraints
 

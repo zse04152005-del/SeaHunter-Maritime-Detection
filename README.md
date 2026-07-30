@@ -11,7 +11,8 @@ The repository has completed the locally verifiable M0 work and has started **M1
 - Historical paper sources live in `docs/archive/`.
 - New system code is developed under `src/seahunter/`.
 - M1 now includes file/device/RTSP/SRT/HTTP ingestion, decode timestamps, live-source reconnection, a bounded
-  freshness-first worker, deterministic JSONL replay, and FPS/P50/P95/P99 performance summaries.
+  freshness-first worker, deterministic JSONL/Parquet replay, annotated video, WebSocket JPEG preview, and
+  CPU/memory/NVIDIA device performance summaries.
 - The complete execution order and acceptance gates are defined in [ROADMAP.md](ROADMAP.md).
 
 ## Repository layout
@@ -35,7 +36,7 @@ The target development Python is 3.10 or 3.11. Python 3.12 may be used for frame
 ```powershell
 uv venv --python 3.11
 .venv\Scripts\Activate.ps1
-uv pip install -e ".[dev,video]"
+uv pip install -e ".[dev,video,edge,parquet]"
 python -m unittest discover -s tests -v
 python evaluation/inspect_baseline.py
 ```
@@ -53,6 +54,8 @@ Offline replay processes every frame and keeps runtime timing outside the determ
 ```powershell
 seahunter-video-replay .\samples\flight.mp4 `
   --output .\outputs\flight.jsonl `
+  --parquet .\outputs\flight.parquet `
+  --annotated-video .\outputs\flight-annotated.mp4 `
   --device cpu
 ```
 
@@ -64,8 +67,24 @@ seahunter-video-replay rtsp://camera.example/live `
   --output .\outputs\live.jsonl `
   --realtime `
   --buffer-capacity 2 `
+  --preview `
   --device 0
 ```
+
+The preview page defaults to `http://127.0.0.1:8000` and exposes `/health`, `/metrics`, and `/ws/preview`. The
+single-slot JPEG hub retains only the latest frame, so a slow browser cannot create an unbounded server queue.
+
+The edge-service entry point enables real-time buffering, preview, and unlimited stream reconnection by default:
+
+```powershell
+seahunter-edge-service rtsp://camera.example/live `
+  --output .\outputs\edge-live.jsonl `
+  --annotated-video .\recordings\edge-live.mp4 `
+  --device 0
+```
+
+The server binds to loopback by default. Set `--preview-host 0.0.0.0` only on a controlled edge network with the
+appropriate firewall and access controls.
 
 Use `--max-reconnect-attempts -1` for an always-on service. The default finite retry budget is safer for CLI jobs.
 Hardware decoding is requested through the selected OpenCV backend when available, but NVDEC must still be verified

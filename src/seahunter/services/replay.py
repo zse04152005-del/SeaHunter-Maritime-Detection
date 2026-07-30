@@ -6,14 +6,16 @@ import hashlib
 import json
 from collections.abc import Iterator, Sequence
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
 from typing import Protocol
 
 from seahunter.perception import Detector
-from seahunter.schemas import Detection, FramePacket
+from seahunter.runtime.monitoring import RuntimeResourceMonitor
+from seahunter.schemas import FramePacket
 from seahunter.video import BufferClosed, FrameIngestWorker, ReaderStats, VideoSource
+
+from .results import FrameResult, FrameResultSink, frame_result_to_record
 
 
 class ReplayFrameReader(Protocol):
@@ -49,9 +51,19 @@ class ReplaySummary:
     inference_p50_ms: float
     inference_p95_ms: float
     inference_p99_ms: float
+    resource_samples: int
+    peak_process_rss_mb: float | None
+    latest_process_cpu_percent: float | None
+    latest_system_memory_percent: float | None
+    peak_gpu_memory_used_mb: float | None
+    peak_gpu_utilization_percent: float | None
+    peak_gpu_temperature_c: float | None
+    peak_gpu_power_w: float | None
+    resource_sampling_failures: int
+    resource_sampling_last_error: str | None
     metadata_sha256: str
 
-    def to_dict(self) -> dict[str, int | float | str]:
+    def to_dict(self) -> dict[str, object]:
         """Return a JSON-serializable summary."""
 
         return asdict(self)
@@ -82,6 +94,8 @@ def run_replay(
     realtime: bool = False,
     buffer_capacity: int = 2,
     include_runtime_timings: bool = False,
+    sinks: Sequence[FrameResultSink] = (),
+    resource_monitor: RuntimeResourceMonitor | None = None,
 ) -> ReplaySummary:
     """Run detection over a source and write canonical JSONL frame records.
 
@@ -107,6 +121,7 @@ def run_replay(
     last_frame_id: int | None = None
     source_id = reader.source.suggested_id()
     worker: FrameIngestWorker | None = None
+    monitor = resource_monitor or RuntimeResourceMonitor()
     started = perf_counter()
 
     try:
@@ -131,29 +146,38 @@ def run_replay(
                 if frame.decode_duration_ms is not None:
                     decode_latencies.append(frame.decode_duration_ms)
 
-                record = _frame_record(
-                    frame,
-                    detections,
-                    detector.detector_id,
+                result = FrameResult(
+                    frame=frame,
+                    detections=tuple(detections),
+                    detector_id=detector.detector_id,
                     dropped_before=dropped_before,
-                    inference_ms=inference_ms if include_runtime_timings else None,
+                    inference_duration_ms=inference_ms,
                 )
+                record = frame_result_to_record(result, include_runtime_timings=include_runtime_timings)
                 stream.write(json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
                 stream.write("\n")
+                for sink in sinks:
+                    sink.write(result)
+                monitor.observe()
                 frames_processed += 1
                 detections_emitted += len(detections)
                 if max_frames is not None and frames_processed >= max_frames:
                     break
     finally:
-        if worker is not None:
-            worker.stop()
-            worker.join(timeout=5.0)
-            queue_frames_dropped = worker.stats().buffer.dropped
-        else:
-            reader.close()
+        try:
+            _close_sinks(sinks)
+        finally:
+            if worker is not None:
+                worker.stop()
+                worker.join(timeout=5.0)
+                queue_frames_dropped = worker.stats().buffer.dropped
+            else:
+                reader.close()
 
+    monitor.observe(force=True)
     wall_duration = max(0.0, perf_counter() - started)
     reader_stats = reader.stats()
+    resources = monitor.summary()
     metadata_sha256 = _sha256_file(output_path)
     summary = ReplaySummary(
         schema_version=1,
@@ -173,6 +197,16 @@ def run_replay(
         inference_p50_ms=round(percentile(inference_latencies, 0.50), 6),
         inference_p95_ms=round(percentile(inference_latencies, 0.95), 6),
         inference_p99_ms=round(percentile(inference_latencies, 0.99), 6),
+        resource_samples=resources.samples,
+        peak_process_rss_mb=resources.peak_process_rss_mb,
+        latest_process_cpu_percent=resources.latest_process_cpu_percent,
+        latest_system_memory_percent=resources.latest_system_memory_percent,
+        peak_gpu_memory_used_mb=resources.peak_gpu_memory_used_mb,
+        peak_gpu_utilization_percent=resources.peak_gpu_utilization_percent,
+        peak_gpu_temperature_c=resources.peak_gpu_temperature_c,
+        peak_gpu_power_w=resources.peak_gpu_power_w,
+        resource_sampling_failures=resources.sampling_failures,
+        resource_sampling_last_error=resources.last_error,
         metadata_sha256=metadata_sha256,
     )
     if summary_path is not None:
@@ -199,55 +233,16 @@ def _worker_frames(worker: FrameIngestWorker) -> Iterator[FramePacket]:
             return
 
 
-def _frame_record(
-    frame: FramePacket,
-    detections: Sequence[Detection],
-    detector_id: str,
-    *,
-    dropped_before: int,
-    inference_ms: float | None,
-) -> dict[str, object]:
-    ordered = sorted(
-        detections,
-        key=lambda detection: (
-            detection.class_id,
-            detection.bbox_xyxy,
-            -detection.confidence,
-            detection.detector_id,
-        ),
-    )
-    record: dict[str, object] = {
-        "schema_version": 1,
-        "source_id": frame.source_id,
-        "frame_id": frame.frame_id,
-        "captured_at": _utc_isoformat(frame.captured_at),
-        "source_pts_seconds": None if frame.source_pts_seconds is None else round(frame.source_pts_seconds, 6),
-        "width": frame.width,
-        "height": frame.height,
-        "dropped_before": dropped_before,
-        "detector_id": detector_id,
-        "detections": [
-            {
-                "bbox_xyxy": [round(value, 6) for value in detection.bbox_xyxy],
-                "class_id": detection.class_id,
-                "class_name": detection.class_name,
-                "confidence": round(detection.confidence, 6),
-                "detector_id": detection.detector_id,
-                "roi_id": detection.roi_id,
-            }
-            for detection in ordered
-        ],
-    }
-    if inference_ms is not None:
-        record["runtime_timing_ms"] = {
-            "decode": None if frame.decode_duration_ms is None else round(frame.decode_duration_ms, 6),
-            "inference": round(inference_ms, 6),
-        }
-    return record
-
-
-def _utc_isoformat(value: datetime) -> str:
-    return value.astimezone(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
+def _close_sinks(sinks: Sequence[FrameResultSink]) -> None:
+    first_error: BaseException | None = None
+    for sink in reversed(sinks):
+        try:
+            sink.close()
+        except BaseException as exc:
+            if first_error is None:
+                first_error = exc
+    if first_error is not None:
+        raise first_error
 
 
 def _sha256_file(path: Path) -> str:

@@ -6,8 +6,18 @@ import argparse
 import json
 from pathlib import Path
 
-from seahunter.runtime import UltralyticsDetector
-from seahunter.services import run_replay
+from seahunter.runtime import RuntimeResourceMonitor, UltralyticsDetector
+from seahunter.schemas import SourceKind
+from seahunter.services import (
+    AnnotatedVideoSink,
+    FrameResultSink,
+    JpegPreviewSink,
+    ParquetResultSink,
+    PreviewHub,
+    PreviewServer,
+    create_preview_app,
+    run_replay,
+)
 from seahunter.video import OpenCVFrameReader, OpenCVReaderConfig, parse_video_source
 
 
@@ -23,6 +33,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("source", help="local video, device index, RTSP, SRT, or HTTP URL")
     parser.add_argument("--output", type=Path, required=True, help="deterministic JSONL metadata output")
     parser.add_argument("--summary", type=Path, help="performance summary JSON (defaults beside output)")
+    parser.add_argument("--parquet", type=Path, help="flattened Parquet output for batch evaluation")
+    parser.add_argument("--annotated-video", type=Path, help="optional video with boxes and runtime overlay")
+    parser.add_argument("--output-fps", type=float, default=25.0, help="annotated video frame rate")
+    parser.add_argument("--video-codec", help="four-character OpenCV codec, e.g. mp4v or MJPG")
     parser.add_argument("--weights", type=Path, default=root / "weights/seahunter_best.pt")
     parser.add_argument("--repo-root", type=Path, default=root)
     parser.add_argument("--source-id", help="stable logical camera/source identifier")
@@ -39,6 +53,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="retry budget per outage; use -1 for an always-on service",
     )
     parser.add_argument("--software-decode", action="store_true", help="disable hardware acceleration preference")
+    parser.add_argument("--preview", action="store_true", help="serve latest JPEG frames over WebSocket")
+    parser.add_argument("--preview-host", default="127.0.0.1")
+    parser.add_argument("--preview-port", type=int, default=8000)
+    parser.add_argument("--preview-quality", type=int, default=80)
     parser.add_argument(
         "--include-runtime-timings",
         action="store_true",
@@ -77,18 +95,75 @@ def main(argv: list[str] | None = None) -> int:
         device=args.device,
     )
     summary_path = args.summary or args.output.with_suffix(".summary.json")
-    summary = run_replay(
-        reader,
-        detector,
-        args.output,
-        summary_path=summary_path,
-        max_frames=args.max_frames,
-        realtime=args.realtime,
-        buffer_capacity=args.buffer_capacity,
-        include_runtime_timings=args.include_runtime_timings,
+    _validate_output_paths(
+        source.kind,
+        source.location,
+        {
+            "JSONL output": args.output,
+            "summary output": summary_path,
+            "Parquet output": args.parquet,
+            "annotated video": args.annotated_video,
+        },
     )
+    monitor = RuntimeResourceMonitor()
+    sinks: list[FrameResultSink] = []
+    if args.parquet is not None:
+        sinks.append(ParquetResultSink(args.parquet))
+    if args.annotated_video is not None:
+        sinks.append(
+            AnnotatedVideoSink(
+                args.annotated_video,
+                fps=args.output_fps,
+                codec=args.video_codec,
+            )
+        )
+
+    server: PreviewServer | None = None
+    if args.preview:
+        hub = PreviewHub()
+        sinks.append(JpegPreviewSink(hub, quality=args.preview_quality))
+        app = create_preview_app(hub, metrics_provider=lambda: monitor.summary().to_dict())
+        server = PreviewServer(app, host=args.preview_host, port=args.preview_port)
+        server.start()
+        print(f"SeaHunter preview: http://{args.preview_host}:{args.preview_port}")
+
+    try:
+        summary = run_replay(
+            reader,
+            detector,
+            args.output,
+            summary_path=summary_path,
+            max_frames=args.max_frames,
+            realtime=args.realtime,
+            buffer_capacity=args.buffer_capacity,
+            include_runtime_timings=args.include_runtime_timings,
+            sinks=sinks,
+            resource_monitor=monitor,
+        )
+    finally:
+        if server is not None:
+            server.stop()
     print(json.dumps(summary.to_dict(), ensure_ascii=False, sort_keys=True, indent=2))
     return 0
+
+
+def _validate_output_paths(
+    source_kind: SourceKind,
+    source_location: str,
+    outputs: dict[str, Path | None],
+) -> None:
+    resolved: dict[Path, str] = {}
+    source_path = Path(source_location).resolve() if source_kind is SourceKind.FILE else None
+    for label, path in outputs.items():
+        if path is None:
+            continue
+        target = path.resolve()
+        if source_path is not None and target == source_path:
+            raise SystemExit(f"{label} must not overwrite the input video")
+        previous = resolved.get(target)
+        if previous is not None:
+            raise SystemExit(f"{label} conflicts with {previous}: {target}")
+        resolved[target] = label
 
 
 if __name__ == "__main__":

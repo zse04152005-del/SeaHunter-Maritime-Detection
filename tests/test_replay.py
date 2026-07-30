@@ -6,8 +6,9 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from seahunter.runtime import ResourceSample, RuntimeResourceMonitor
 from seahunter.schemas import Detection, FramePacket
-from seahunter.services import percentile, run_replay
+from seahunter.services import FrameResult, percentile, run_replay
 from seahunter.video import ReaderStats, parse_video_source
 
 
@@ -79,6 +80,29 @@ class FakeDetector:
         ]
 
 
+class ConstantMetricsProvider:
+    def sample(self) -> ResourceSample:
+        return ResourceSample(
+            process_rss_mb=128.0,
+            process_cpu_percent=25.0,
+            system_memory_percent=60.0,
+            gpu_memory_used_mb=512.0,
+            gpu_utilization_percent=40.0,
+        )
+
+
+class CapturingSink:
+    def __init__(self) -> None:
+        self.frame_ids: list[int] = []
+        self.closed = False
+
+    def write(self, result: FrameResult) -> None:
+        self.frame_ids.append(result.frame.frame_id)
+
+    def close(self) -> None:
+        self.closed = True
+
+
 class ReplayTests(unittest.TestCase):
     def test_percentile_interpolates(self) -> None:
         self.assertEqual(percentile([1.0, 2.0, 3.0, 4.0], 0.5), 2.5)
@@ -121,6 +145,27 @@ class ReplayTests(unittest.TestCase):
             self.assertTrue(summary_path.is_file())
             first = json.loads(output.read_text(encoding="utf-8").splitlines()[0])
             self.assertIn("runtime_timing_ms", first)
+
+    def test_replay_dispatches_sinks_and_resource_monitor(self) -> None:
+        with TemporaryDirectory() as directory:
+            sink = CapturingSink()
+            monitor = RuntimeResourceMonitor(
+                provider=ConstantMetricsProvider(),
+                interval_seconds=0.0,
+            )
+            summary = run_replay(
+                FakeReader(2),
+                FakeDetector(),
+                Path(directory) / "replay.jsonl",
+                sinks=[sink],
+                resource_monitor=monitor,
+            )
+
+            self.assertEqual(sink.frame_ids, [0, 1])
+            self.assertTrue(sink.closed)
+            self.assertGreaterEqual(summary.resource_samples, 2)
+            self.assertEqual(summary.peak_process_rss_mb, 128.0)
+            self.assertEqual(summary.peak_gpu_memory_used_mb, 512.0)
 
 
 if __name__ == "__main__":
