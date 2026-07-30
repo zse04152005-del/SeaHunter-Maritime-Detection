@@ -4,12 +4,13 @@ SeaHunter-VIS is the system-level evolution of the original SeaHunter maritime d
 
 ## Current status
 
-The repository is in **M0: baseline freeze and engineering governance**.
+The repository has completed the locally verifiable M0 work and has started **M1: video-stream detection MVP**. Dataset metric reproduction and TensorRT validation remain gated by external data and NVIDIA target hardware.
 
 - The original detector and weight are retained as a reproducible legacy baseline.
 - Historical training and inference scripts live in `legacy/`.
 - Historical paper sources live in `docs/archive/`.
 - New system code is developed under `src/seahunter/`.
+- The M1 foundation includes framework-neutral one-frame inference and a bounded drop-oldest buffer for real-time freshness.
 - The complete execution order and acceptance gates are defined in [ROADMAP.md](ROADMAP.md).
 
 ## Repository layout

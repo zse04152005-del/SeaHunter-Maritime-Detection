@@ -55,7 +55,7 @@
 - A blank-frame CPU inference smoke test passes.
 - SPDConv, EMA, MultiSEAM forward/backward tests pass.
 - NWD similarity, parameter validation, RTSP/SRT parsing, schemas, and geofence tests pass.
-- Current automated result: 17 tests passed.
+- Current automated result after M1 foundation work: 23 tests passed.
 - Ruff formatting/linting and strict mypy checks pass for new system code.
 - Static ONNX export at 256×256 passes with output shape `[1, 9, 5440]`.
 - PyTorch/ONNX raw-output consistency passes: max absolute error `1.8310546875e-4`, mean absolute error `2.9645066206e-6`.

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import unittest
+from datetime import UTC, datetime
 from pathlib import Path
 
 RUN_MODEL_TESTS = os.getenv("SEAHUNTER_RUN_MODEL_TESTS") == "1"
@@ -56,6 +57,28 @@ class LegacyModelTests(unittest.TestCase):
         results = model.predict(source=image, imgsz=256, device="cpu", verbose=False)
         self.assertEqual(len(results), 1)
         self.assertEqual(tuple(results[0].orig_shape), (256, 256))
+
+    def test_framework_neutral_detector_adapter(self) -> None:
+        from seahunter.runtime import UltralyticsDetector
+        from seahunter.schemas import FramePacket
+
+        detector = UltralyticsDetector(
+            self.root / "weights/seahunter_best.pt",
+            repo_root=self.root,
+            imgsz=256,
+            device="cpu",
+        )
+        frame = FramePacket(
+            source_id="smoke",
+            frame_id=0,
+            captured_at=datetime.now(UTC),
+            width=256,
+            height=256,
+            payload=self.np.zeros((256, 256, 3), dtype=self.np.uint8),
+        )
+        detections = detector.infer(frame)
+        self.assertIsInstance(detections, list)
+        self.assertTrue(detector.detector_id.startswith("ultralytics-8.3.234:"))
 
 
 if __name__ == "__main__":
