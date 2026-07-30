@@ -2,7 +2,7 @@
 
 Date: 2026-07-30
 Branch: `feature/m2-bytetrack-baseline`
-Status: implementation complete; cloud validation pending
+Status: cloud accepted; real synchronized telemetry benefit gate remains open
 
 ## Implemented boundary
 
@@ -29,9 +29,18 @@ Synthetic tests validate coordinate signs, yaw wrap, time gates, fusion branches
 continuity for a known camera rotation. They are implementation checks only and set no real maritime performance
 claim. A real benefit gate requires synchronized target-platform telemetry and held-out moving-camera maritime video.
 
-## Pending acceptance
+## Cloud acceptance
 
-- Python 3.10/3.12 unit and quality workflows.
-- Focused `m2-motion-prior` cloud job.
+- Accepted commit: `288fc39fd4e315a8d3018dc67194268f751fe7d6`.
+- The focused `m2-motion-prior` job passed 17 tests in 1.32 seconds.
+- Cloud validation:
+  <https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30534512793>
+- Python 3.10/3.12 CI and quality gates:
+  <https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30534512383>
+- Motion-prior artifact:
+  <https://github.com/zse04152005-del/SeaHunter-Maritime-Detection/actions/runs/30534512793/artifacts/8756069632>
+
+## Remaining external gate
+
 - Real telemetry/video calibration and paired visual-only versus fused tracking evaluation remain external M3/M8
   gates.
