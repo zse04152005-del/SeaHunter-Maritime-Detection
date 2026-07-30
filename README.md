@@ -16,7 +16,8 @@ validation remain gated by external data and NVIDIA target hardware.
   freshness-first worker, deterministic JSONL/Parquet replay, annotated video, WebSocket JPEG preview, and
   CPU/memory/NVIDIA device performance summaries.
 - The M2 baseline adds framework-neutral two-stage ByteTrack association, Kalman motion prediction, explicit track
-  lifecycle/loss reasons, optional short-occlusion predictions, MOTChallenge export, and auditable track JSONL.
+  lifecycle/loss reasons, finite short-occlusion extrapolation, bounded offline interpolation, MOTChallenge export,
+  and auditable track JSONL.
 - A selectable BoT-SORT baseline adds foreground-masked sparse optical flow, RANSAC affine camera-motion
   compensation, telemetry-prior fusion, and optional quality-gated ReID with clear-frame tracklet templates. ReID
   remains disabled by default until its thresholds and encoder are validated on held-out maritime tracks.
@@ -60,7 +61,7 @@ uv pip install -e ".[legacy-detector]"
 
 The authoritative test matrix runs in GitHub Actions on Python 3.10 and 3.12. The manual `cloud-validation`
 workflow provides focused `m0-governance`, `legacy-detector`, `m1-replay`, `m2-tracking`, `m2-evaluation`, `m2-gmc`,
-`m2-motion-prior`, `m2-association`, `m2-reid`, and `all` suites with JUnit and metric artifacts.
+`m2-motion-prior`, `m2-association`, `m2-reid`, `m2-recovery`, and `all` suites with JUnit and metric artifacts.
 
 ## Detector experiment planning
 
@@ -150,6 +151,7 @@ seahunter-video-replay .\samples\flight.mp4 `
   --mot-output .\outputs\flight-mot.txt `
   --track-frame-rate 25 `
   --track-emit-lost `
+  --track-interpolate-max-gap 3 `
   --track-trail-length 30 `
   --device cpu
 ```
@@ -158,6 +160,11 @@ MOT output contains observed states by default. Add `--mot-include-inferred` onl
 intended to consume motion-model predictions. The audit JSONL always retains `observed`/`inferred`, lifecycle,
 association score, covariance, age, time-since-update, tracker configuration ID, and loss reason. Starting parameters
 are recorded in `configs/tracking/bytetrack.maritime.yaml` and must be calibrated on video-level maritime data.
+
+`--track-emit-lost` emits causal Kalman extrapolations only up to the configured loss horizon. For offline audit
+outputs, `--track-interpolate-max-gap N` delays at most `N` frames and replaces a closed short gap with linear box
+interpolation. Audit schema 5 distinguishes `extrapolated` from `interpolated`; live overlays remain causal and are
+never retroactively rewritten.
 
 Use the BoT-SORT motion branch for a moving UAV camera:
 
@@ -174,7 +181,7 @@ seahunter-video-replay .\samples\flight.mp4 `
 
 The visual GMC estimator masks detector boxes, tracks background corners with pyramidal LK flow, fits a partial
 affine transform with RANSAC, and rejects low-support or implausible translation/scale/rotation estimates. Rejected
-frames use an identity fallback instead of moving tracks with an unreliable warp. Track audit JSONL schema v2
+frames use an identity fallback instead of moving tracks with an unreliable warp. Track audit JSONL schema v5
 records the affine coefficients, quality, applied flag, and fallback reason. `--gmc-disabled` provides a paired
 ablation with otherwise identical BoT-SORT settings; starting parameters are versioned in
 `configs/tracking/botsort.maritime.yaml`.

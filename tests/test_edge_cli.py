@@ -31,6 +31,8 @@ class EdgeCliTests(unittest.TestCase):
                 "--track-trail-length",
                 "24",
                 "--track-emit-lost",
+                "--track-interpolate-max-gap",
+                "3",
                 "--mot-output",
                 "tracks.txt",
                 "--mot-include-inferred",
@@ -42,6 +44,7 @@ class EdgeCliTests(unittest.TestCase):
         self.assertEqual(args.track_frame_rate, 25.0)
         self.assertEqual(args.track_trail_length, 24)
         self.assertTrue(args.track_emit_lost)
+        self.assertEqual(args.track_interpolate_max_gap, 3)
         self.assertTrue(args.mot_include_inferred)
 
     def test_video_replay_parser_accepts_botsort_gmc_controls(self) -> None:

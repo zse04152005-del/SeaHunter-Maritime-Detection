@@ -9,6 +9,7 @@ import numpy as np
 from seahunter.schemas import (
     Detection,
     FramePacket,
+    InferenceMethod,
     ObservationKind,
     TrackLifecycle,
     TrackLossReason,
@@ -70,6 +71,7 @@ def track(
         age_frames=frame_id + 1,
         time_since_update=1 if inferred else 0,
         lost_reason=TrackLossReason.UNMATCHED if inferred else None,
+        inference_method=InferenceMethod.EXTRAPOLATED if inferred else None,
     )
 
 

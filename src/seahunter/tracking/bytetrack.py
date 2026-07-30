@@ -11,6 +11,7 @@ from typing import Any
 from seahunter.schemas import (
     Detection,
     FramePacket,
+    InferenceMethod,
     ObservationKind,
     TrackLifecycle,
     TrackLossReason,
@@ -435,6 +436,7 @@ class ByteTracker:
             reid_eligible=track.reid_eligible,
             reid_bypass_reason=track.reid_bypass_reason,
             lost_reason=track.lost_reason,
+            inference_method=(InferenceMethod.EXTRAPOLATED if observation is ObservationKind.INFERRED else None),
         )
 
 

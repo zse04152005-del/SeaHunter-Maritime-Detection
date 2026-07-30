@@ -76,7 +76,7 @@ class TrackJsonlWriter:
         stream = self._ensure_stream()
         for state in sorted(states, key=lambda item: (item.frame_id, item.track_id)):
             record = {
-                "schema_version": 4,
+                "schema_version": 5,
                 "tracker_id": state.tracker_id,
                 "track_id": state.track_id,
                 "frame_id": state.frame_id,
@@ -101,6 +101,7 @@ class TrackJsonlWriter:
                 "reid_eligible": state.reid_eligible,
                 "reid_bypass_reason": state.reid_bypass_reason,
                 "lost_reason": None if state.lost_reason is None else state.lost_reason.value,
+                "inference_method": None if state.inference_method is None else state.inference_method.value,
                 "global_motion": (
                     None
                     if state.global_motion_affine is None

@@ -13,5 +13,6 @@
 | 2026-07-30 | D-009 | Use aligned IMU/gimbal rotation only as a gated GMC prior | Telemetry can rescue weak visual texture but cannot replace visual evidence or calibrated translation geometry | M3 calibration/time-sync results or real-sequence disagreement analysis |
 | 2026-07-30 | D-010 | Gate high/low ByteTrack association with Kalman Mahalanobis distance before Hungarian assignment | IoU alone can match physically implausible center/scale jumps, and post-assignment rejection can hide valid alternatives | Held-out maritime MOT calibration supports a different confidence level or measurement model |
 | 2026-07-30 | D-011 | Permit ReID only after crop quality gates and aggregate only eligible observations into tracklet templates | Tiny, blurred, clipped, dark, saturated, or overlapping maritime crops can cause identity hijacking | Real crop calibration changes gates or a validated ONNX ReID encoder replaces the histogram baseline |
+| 2026-07-30 | D-012 | Keep live recovery causal and restrict hindsight interpolation to a bounded offline-output buffer | Retrospective boxes must not leak into real-time alerts or be mislabeled as observations | A validated fixed-lag smoother replaces linear interpolation with equivalent audit separation |
 
 Architecture decisions with broader context remain under `docs/adr/`.

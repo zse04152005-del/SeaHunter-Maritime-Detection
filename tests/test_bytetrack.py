@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from seahunter.schemas import (
     Detection,
     FramePacket,
+    InferenceMethod,
     ObservationKind,
     TrackLifecycle,
     TrackLossReason,
@@ -77,6 +78,7 @@ class ByteTrackerTests(unittest.TestCase):
         self.assertEqual(inferred.observation, ObservationKind.INFERRED)
         self.assertEqual(inferred.lifecycle, TrackLifecycle.LOST)
         self.assertEqual(inferred.lost_reason, TrackLossReason.UNMATCHED)
+        self.assertEqual(inferred.inference_method, InferenceMethod.EXTRAPOLATED)
         self.assertEqual(recovered.observation, ObservationKind.OBSERVED)
         self.assertIsNone(recovered.lost_reason)
 

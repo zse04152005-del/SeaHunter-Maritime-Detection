@@ -20,10 +20,17 @@ class SourceKind(str, Enum):
 
 
 class ObservationKind(str, Enum):
-    """Whether a track point came from a detector or a motion model."""
+    """Whether a track point was directly observed or synthesized."""
 
     OBSERVED = "observed"
     INFERRED = "inferred"
+
+
+class InferenceMethod(str, Enum):
+    """How an inferred trajectory point was produced."""
+
+    EXTRAPOLATED = "extrapolated"
+    INTERPOLATED = "interpolated"
 
 
 class TrackLifecycle(str, Enum):
@@ -185,6 +192,7 @@ class TrackState:
     reid_eligible: bool | None = None
     reid_bypass_reason: str | None = None
     lost_reason: TrackLossReason | None = None
+    inference_method: InferenceMethod | None = None
     global_motion_affine: tuple[float, float, float, float, float, float] | None = None
     global_motion_quality: float | None = None
     global_motion_applied: bool = False
@@ -230,6 +238,10 @@ class TrackState:
             raise ValueError("observed track states must not have a lost_reason")
         if self.observation is ObservationKind.INFERRED and self.lost_reason is None:
             raise ValueError("inferred track states must have a lost_reason")
+        if self.observation is ObservationKind.OBSERVED and self.inference_method is not None:
+            raise ValueError("observed track states cannot have an inference_method")
+        if self.observation is ObservationKind.INFERRED and self.inference_method is None:
+            raise ValueError("inferred track states require an inference_method")
         if self.global_motion_affine is None:
             if (
                 self.global_motion_quality is not None

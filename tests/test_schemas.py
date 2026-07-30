@@ -7,6 +7,7 @@ from seahunter.schemas import (
     Detection,
     FramePacket,
     GeoEstimate,
+    InferenceMethod,
     ObservationKind,
     TrackLossReason,
     TrackState,
@@ -99,6 +100,32 @@ class SchemaTests(unittest.TestCase):
                 class_id=0,
                 confidence=0.8,
                 observation=ObservationKind.INFERRED,
+            )
+
+    def test_inferred_track_requires_method(self) -> None:
+        with self.assertRaises(ValueError):
+            TrackState(
+                track_id=1,
+                frame_id=1,
+                captured_at=datetime.now(timezone.utc),
+                bbox_xyxy=(0.0, 0.0, 10.0, 10.0),
+                class_id=0,
+                confidence=0.8,
+                observation=ObservationKind.INFERRED,
+                lost_reason=TrackLossReason.UNMATCHED,
+            )
+
+    def test_observed_track_rejects_inference_method(self) -> None:
+        with self.assertRaises(ValueError):
+            TrackState(
+                track_id=1,
+                frame_id=1,
+                captured_at=datetime.now(timezone.utc),
+                bbox_xyxy=(0.0, 0.0, 10.0, 10.0),
+                class_id=0,
+                confidence=0.8,
+                observation=ObservationKind.OBSERVED,
+                inference_method=InferenceMethod.INTERPOLATED,
             )
 
     def test_applied_global_motion_requires_coefficients_and_quality(self) -> None:

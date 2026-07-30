@@ -21,6 +21,7 @@ on:
           - m2-motion-prior
           - m2-association
           - m2-reid
+          - m2-recovery
           - all
 
 permissions:
@@ -295,4 +296,34 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: m2-reid-reports
+          path: reports/
+
+  m2-recovery:
+    if: github.event_name == 'push' || inputs.suite == 'm2-recovery' || inputs.suite == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install trajectory recovery environment
+        run: uv sync --extra dev --extra tracking
+      - name: Run interpolation, extrapolation, and audit validation
+        run: |
+          mkdir -p reports
+          uv run pytest \
+            tests/test_trajectory_recovery.py \
+            tests/test_bytetrack.py \
+            tests/test_tracking_outputs.py \
+            tests/test_tracking_visualization.py \
+            tests/test_schemas.py \
+            tests/test_edge_cli.py \
+            --junitxml=reports/m2-recovery.xml
+      - name: Upload trajectory recovery reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2-recovery-reports
           path: reports/

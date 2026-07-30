@@ -57,10 +57,11 @@ class TrackingOutputTests(unittest.TestCase):
             audit_rows = [json.loads(line) for line in (root / "tracks.jsonl").read_text(encoding="utf-8").splitlines()]
             self.assertEqual(len(mot_lines), 2)
             self.assertTrue(mot_lines[0].startswith("1,1,"))
-            self.assertTrue(all(row["schema_version"] == 4 for row in audit_rows))
+            self.assertTrue(all(row["schema_version"] == 5 for row in audit_rows))
             self.assertEqual([row["observation"] for row in audit_rows], ["observed", "inferred", "observed"])
             self.assertEqual([row["association_stage"] for row in audit_rows], ["new", None, "high"])
             self.assertEqual(audit_rows[1]["lost_reason"], "unmatched")
+            self.assertEqual(audit_rows[1]["inference_method"], "extrapolated")
             self.assertEqual(tracking.frames_processed, 3)
             self.assertEqual(tracking.states_emitted, 3)
 

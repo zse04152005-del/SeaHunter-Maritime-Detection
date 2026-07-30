@@ -31,6 +31,7 @@ from seahunter.tracking import (
     MultiObjectTracker,
     SparseOpticalFlowConfig,
     TrackJsonlWriter,
+    TrajectoryRecoveryWriter,
 )
 from seahunter.video import OpenCVFrameReader, OpenCVReaderConfig, parse_video_source
 
@@ -85,6 +86,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--track-inferred-confidence-decay", type=float, default=0.9)
     parser.add_argument("--track-class-agnostic", action="store_true")
     parser.add_argument("--track-emit-lost", action="store_true")
+    parser.add_argument(
+        "--track-interpolate-max-gap",
+        type=int,
+        default=0,
+        help="bounded output delay and linear gap interpolation; 0 disables it",
+    )
     parser.add_argument("--track-motion-gating-disabled", action="store_true")
     parser.add_argument(
         "--track-motion-gate-threshold",
@@ -171,6 +178,12 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--mot-include-inferred requires --mot-output")
     if args.track_trail_length < 0:
         raise SystemExit("--track-trail-length must be non-negative")
+    if args.track_interpolate_max_gap < 0:
+        raise SystemExit("--track-interpolate-max-gap must be non-negative")
+    if args.track_interpolate_max_gap > 0 and not args.track_emit_lost:
+        raise SystemExit("--track-interpolate-max-gap requires --track-emit-lost")
+    if args.track_interpolate_max_gap > 0 and args.tracks_jsonl is None and args.mot_output is None:
+        raise SystemExit("--track-interpolate-max-gap requires a tracking output")
     if args.reid_enabled and args.tracker != "botsort":
         raise SystemExit("--reid-enabled requires --tracker botsort")
     if args.reid_enabled and args.reid_maximum_age > args.track_max_lost:
@@ -180,6 +193,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.parquet is not None:
         sinks.append(ParquetResultSink(args.parquet))
     tracking_sink: TrackingSink | None = None
+    recovery_writer: TrajectoryRecoveryWriter | None = None
     if args.tracker != "none":
         track_outputs: list[TrackStateSink] = []
         if args.tracks_jsonl is not None:
@@ -191,10 +205,15 @@ def main(argv: list[str] | None = None) -> int:
                     include_inferred=args.mot_include_inferred,
                 )
             )
-        tracking_sink = TrackingSink(
-            _build_tracker(args),
-            sinks=track_outputs,
-        )
+        if args.track_interpolate_max_gap > 0:
+            recovery_writer = TrajectoryRecoveryWriter(
+                track_outputs,
+                maximum_gap_frames=args.track_interpolate_max_gap,
+            )
+            selected_track_outputs: list[TrackStateSink] = [recovery_writer]
+        else:
+            selected_track_outputs = track_outputs
+        tracking_sink = TrackingSink(_build_tracker(args), sinks=selected_track_outputs)
         sinks.append(tracking_sink)
 
     track_state_provider = None if tracking_sink is None else tracking_sink.snapshot
@@ -253,6 +272,8 @@ def main(argv: list[str] | None = None) -> int:
         if isinstance(tracking_sink.tracker, BoTSORTTracker):
             tracking_summary["global_motion"] = tracking_sink.tracker.motion_summary()
             tracking_summary["appearance"] = tracking_sink.tracker.appearance_summary()
+        if recovery_writer is not None:
+            tracking_summary["trajectory_recovery"] = recovery_writer.summary()
         output_summary["tracking"] = tracking_summary
     print(json.dumps(output_summary, ensure_ascii=False, sort_keys=True, indent=2))
     return 0

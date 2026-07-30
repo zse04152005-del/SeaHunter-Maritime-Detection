@@ -21,8 +21,11 @@ motion_gate_threshold: 13.276704
 outputs:
   mot_include_inferred: false
   audit_jsonl: true
-  audit_jsonl_schema_version: 4
+  audit_jsonl_schema_version: 5
   track_trail_length: 30
+  trajectory_recovery:
+    enabled: false
+    maximum_interpolation_gap_frames: 3
 
 # Starting values only: calibrate by target size, weather, camera motion, and source FPS
 # on a leakage-free maritime MOT validation split before accepting the baseline.

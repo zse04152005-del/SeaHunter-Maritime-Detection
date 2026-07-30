@@ -21,6 +21,7 @@ from .global_motion import (
 from .kalman import KalmanXYWH
 from .mot import MOTChallengeWriter, TrackJsonlWriter
 from .motion_fusion import MotionFusionConfig, fuse_global_motion
+from .recovery import TrajectoryRecoveryWriter
 from .telemetry_motion import TelemetryMotionConfig, TelemetryMotionEstimator, TelemetryMotionPrior
 
 __all__ = [
@@ -46,6 +47,7 @@ __all__ = [
     "TelemetryMotionEstimator",
     "TelemetryMotionPrior",
     "TrackJsonlWriter",
+    "TrajectoryRecoveryWriter",
     "aggregate_template",
     "cosine_similarity",
     "fuse_global_motion",

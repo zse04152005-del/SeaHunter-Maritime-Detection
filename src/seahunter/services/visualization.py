@@ -363,6 +363,7 @@ def _track_state_to_preview_record(state: TrackState) -> dict[str, object]:
         "reid_eligible": state.reid_eligible,
         "reid_bypass_reason": state.reid_bypass_reason,
         "lost_reason": None if state.lost_reason is None else state.lost_reason.value,
+        "inference_method": None if state.inference_method is None else state.inference_method.value,
         "global_motion": (
             None
             if state.global_motion_affine is None
